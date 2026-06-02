@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月度盘点 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .lock-bar {
+            padding: 15px 30px;
+            background: #ffe8e8;
+            border-bottom: 1px solid var(--danger-color);
+            font-size: 16px;
+            color: var(--danger-color);
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lock-btn {
+            height: 40px;
+            padding: 0 20px;
+            background: var(--danger-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .lock-btn.locked { background: var(--success-color); }
+        .check-table {
+            margin: 20px 30px;
+            background: var(--bg-main);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            flex: 1;
+            overflow: auto;
+        }
+        .action-area {
+            padding: 20px 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .main-btn {
+            height: 50px;
+            padding: 0 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #fff;
+        }
+        .main-btn.primary { background: var(--primary-color); }
+        .main-btn.success { background: var(--success-color); }
+        .main-btn.export { background: var(--success-color); }
+        .back-btn {
+            margin: 20px 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼模式</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">登录人：王主管 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-btn">← 返回首页</a>
+
+        <div class="lock-bar" id="lockBar">
+            <span id="lockText">未锁仓！盘点期间库存变动将影响账实准确性</span>
+            <button class="lock-btn" id="lockBtn" onclick="toggleLock()">点击锁仓</button>
+        </div>
+
+        <div class="check-table">
+            <div class="section-header">
+                <span>月度库存盘点表</span>
+                <button class="filter-btn export" onclick="exportToExcel('checkTable', '月度盘点表')">导出盘点差异表</button>
+            </div>
+            <div class="excel-table">
+                <table id="checkTable">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>品名</th>
+                            <th>系统库存</th>
+                            <th>实盘数量</th>
+                            <th>差异</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SPK100</td>
+                            <td>智能音箱</td>
+                            <td>120</td>
+                            <td><input type="number" class="form-input" value="118" style="width: 80px;"></td>
+                            <td class="status-red">-2</td>
+                            <td><button class="audit-btn pass">扫码录入</button></td>
+                        </tr>
+                        <tr>
+                            <td>CAM300</td>
+                            <td>监控摄像头</td>
+                            <td>86</td>
+                            <td><input type="number" class="form-input" value="86" style="width: 80px;"></td>
+                            <td class="status-green">0</td>
+                            <td><button class="audit-btn pass">扫码录入</button></td>
+                        </tr>
+                        <tr>
+                            <td>MS200</td>
+                            <td>智能门锁</td>
+                            <td>245</td>
+                            <td><input type="number" class="form-input" value="241" style="width: 80px;"></td>
+                            <td class="status-red">-4</td>
+                            <td><button class="audit-btn pass">扫码录入</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="action-area">
+            <button class="main-btn export" onclick="importExcel()">导入Excel盘点表</button>
+            <button class="main-btn success" onclick="submitCheck()">双人复核提交</button>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script>
+        // 自动填充当前日期
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+        let isLocked = false;
+        function toggleLock() {
+            isLocked = !isLocked;
+            const lockBar = document.getElementById('lockBar');
+            const lockText = document.getElementById('lockText');
+            const lockBtn = document.getElementById('lockBtn');
+
+            if(isLocked) {
+                lockBar.style.background = '#e8f8e8';
+                lockBar.style.borderColor = 'var(--success-color)';
+                lockBar.style.color = 'var(--success-color)';
+                lockText.innerText = '已锁仓！盘点期间禁止库存变动';
+                lockBtn.innerText = '解除锁仓';
+                lockBtn.classList.add('locked');
+                addAuditLog('系统设置', '盘点锁仓', '未锁仓', '已锁仓');
+            } else {
+                lockBar.style.background = '#ffe8e8';
+                lockBar.style.borderColor = 'var(--danger-color)';
+                lockBar.style.color = 'var(--danger-color)';
+                lockText.innerText = '未锁仓！盘点期间库存变动将影响账实准确性';
+                lockBtn.innerText = '点击锁仓';
+                lockBtn.classList.remove('locked');
+                addAuditLog('系统设置', '解除盘点锁仓', '已锁仓', '未锁仓');
+            }
+        }
+
+        function importExcel() {
+            alert('请选择Excel盘点表文件\n模拟导入成功，已自动填充实盘数量');
+        }
+
+        function submitCheck() {
+            if(!isLocked) {
+                alert('请先锁仓再提交盘点结果！');
+                return;
+            }
+            addAuditLog('库存调整', '月度盘点差异调整', '系统库存：120', '系统库存：118');
+            alert('盘点结果已提交，双人复核通过！库存差异已自动调整');
+        }
+    </script>
+</body>
+</html>

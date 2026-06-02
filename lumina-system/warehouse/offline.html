@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线应急模式 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .offline-status {
+            padding: 20px 30px;
+            background: #fff3cd;
+            border-bottom: 1px solid #ffc107;
+            font-size: 18px;
+            color: #856404;
+            font-weight: bold;
+            text-align: center;
+        }
+        .offline-menu {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 30px;
+        }
+        .offline-btn {
+            height: 100px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .cache-info {
+            margin: 0 30px;
+            background: var(--bg-main);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        .action-area {
+            padding: 20px 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .main-btn {
+            height: 50px;
+            padding: 0 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #fff;
+        }
+        .main-btn.success { background: var(--success-color); }
+        .main-btn.warning { background: var(--warning-color); }
+        .main-btn.danger { background: var(--danger-color); }
+        .back-btn {
+            margin: 20px 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-right">
+                <div class="user-info">登录人：王主管 | 离线模式</div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-btn">← 返回首页</a>
+
+        <div class="offline-status">
+            📶 数据本地加密缓存 | 最后同步时间：2026-05-10 09:15
+        </div>
+
+        <div class="offline-menu">
+            <button class="offline-btn">
+                <span>📦</span>
+                <span>离线发货录入</span>
+            </button>
+            <button class="offline-btn">
+                <span>🔄</span>
+                <span>离线退货录入</span>
+            </button>
+            <button class="offline-btn">
+                <span>📋</span>
+                <span>离线盘点录入</span>
+            </button>
+        </div>
+
+        <div class="cache-info">
+            <h3 style="margin-bottom: 10px;">当前本地缓存数据</h3>
+            <div>发货记录：5条</div>
+            <div>退货记录：8条</div>
+            <div>盘点记录：1条</div>
+            <div style="margin-top: 10px; color: var(--warning-color);">
+                提示：所有数据已加密保存在本地，网络恢复后请立即同步
+            </div>
+        </div>
+
+        <div class="action-area">
+            <button class="main-btn warning" onclick="alert('本地缓存已备份成功')">手动缓存备份</button>
+            <button class="main-btn success" onclick="alert('网络已恢复，数据同步中...\n同步完成！所有离线操作已上传')">一键同步数据</button>
+            <button class="main-btn danger" onclick="window.location.href='index.html'">退出离线模式</button>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+</body>
+</html>

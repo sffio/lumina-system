@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库工作台 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 20px 30px;
+        }
+        .metric-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .metric-title {
+            font-size: 14px;
+            color: var(--text-second);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        .metric-value.red { color: var(--danger-color); }
+        .metric-value.yellow { color: var(--warning-color); }
+        .metric-value.green { color: var(--success-color); }
+        .quick-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 0 30px 20px;
+        }
+        .menu-btn {
+            height: 80px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .menu-btn.warning { background: var(--warning-color); }
+        .menu-btn.danger { background: var(--danger-color); }
+        .stock-table {
+            margin: 0 30px 20px;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            flex: 1;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-menu">
+                <div class="nav-item active">仓库工作台</div>
+                <div class="nav-item" onclick="window.location.href='delivery.html'">发货管理</div>
+                <div class="nav-item" onclick="window.location.href='refund.html'">退货录入</div>
+                <div class="nav-item" onclick="window.location.href='check.html'">库存盘点</div>
+                <div class="nav-item" onclick="window.location.href='offline.html'">离线模式</div>
+            </div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼模式</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">登录人：王主管 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">今日待发货B2B订单</div>
+                <div class="metric-value red">3</div>
+                <div class="metric-desc">2笔超时未发货</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">待处理退货</div>
+                <div class="metric-value yellow">8</div>
+                <div class="metric-desc">需今日录入系统</div>
+            </div>
+        </div>
+
+        <div class="quick-menu">
+            <button class="menu-btn" onclick="window.location.href='delivery.html'">
+                <span>📦</span>
+                <span>待发货订单</span>
+            </button>
+            <button class="menu-btn" onclick="window.location.href='refund.html'">
+                <span>🔄</span>
+                <span>退货录入</span>
+            </button>
+            <button class="menu-btn warning" onclick="window.location.href='check.html'">
+                <span>📋</span>
+                <span>月度盘点</span>
+            </button>
+            <button class="menu-btn danger" onclick="window.location.href='offline.html'">
+                <span>📶</span>
+                <span>紧急离线模式</span>
+            </button>
+        </div>
+
+        <div class="stock-table">
+            <div class="section-header">
+                <span>库存预警</span>
+                <button class="filter-btn export" onclick="exportToExcel('stockTable', '库存预警表')">导出Excel</button>
+            </div>
+            <div class="excel-table">
+                <table id="stockTable">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>品名</th>
+                            <th>当前库存</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SPK100</td>
+                            <td>智能音箱</td>
+                            <td class="status-red">-213</td>
+                            <td class="status-red">超卖</td>
+                        </tr>
+                        <tr>
+                            <td>CAM300</td>
+                            <td>监控摄像头</td>
+                            <td class="status-yellow">12</td>
+                            <td class="status-yellow">低库存</td>
+                        </tr>
+                        <tr>
+                            <td>MS200</td>
+                            <td>智能门锁</td>
+                            <td class="status-green">246</td>
+                            <td class="status-green">正常</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script>
+        // 自动填充当前日期
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    </script>
+</body>
+</html>
