@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>月度盘点 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../../css/common.css">
+    <link rel="stylesheet" href="css/mobile-common.css">
+    <style>
+        .reason-select-sm { height: 36px; padding: 0 4px; border: 1px solid var(--border-light); border-radius: 4px; font-size: 12px; background: var(--bg-main); width: 72px; }
+        /* Password bottom sheet */
+        .pwd-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: flex-end; justify-content: center; }
+        .pwd-mask.show { display: flex; }
+        .pwd-sheet { width: 100%; max-width: 430px; background: #fff; border-radius: 16px 16px 0 0; padding: 24px 20px 20px; text-align: center; }
+        .pwd-sheet h3 { font-size: 18px; margin-bottom: 6px; }
+        .pwd-sheet .hint { font-size: 13px; color: #999; margin-bottom: 20px; }
+        .pwd-sheet input { width: 100%; height: 48px; padding: 0 16px; border: 2px solid #ddd; border-radius: 8px; font-size: 20px; text-align: center; letter-spacing: 4px; margin-bottom: 20px; }
+        .pwd-sheet input:focus { outline: none; border-color: var(--primary-color); }
+        .pwd-sheet .btns { display: flex; gap: 12px; }
+        .pwd-sheet .btns button { flex: 1; height: 48px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: var(--font-stack); }
+        .pwd-btn-cancel { background: #f0f0f0; color: #333; }
+        .pwd-btn-confirm { background: var(--primary-color); color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="mobile-top-bar">
+            <div class="top-left">
+                <a href="index.html" class="back-link-mobile" title="返回工作台" data-icon="chevron-left" data-icon-size="24"></a>
+                <span class="top-title">月度盘点</span>
+            </div>
+            <div class="top-right">
+                <button class="eye-mobile-btn" id="eyeMobileBtn" onclick="toggleEyeMobile()" title="护眼模式"></button>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <div class="lock-bar-mobile" id="lockBar">
+                <span id="lockText">未锁仓！盘点期间库存变动将影响账实准确性</span>
+                <button class="lock-btn-mobile" id="lockBtn" onclick="toggleLock()">点击锁仓</button>
+            </div>
+
+            <div class="check-section-header">
+                <span class="section-title">月度库存盘点表</span>
+                <button class="export-btn-sm" onclick="exportToExcel('checkTable', '月度盘点表')">导出Excel</button>
+            </div>
+
+            <div class="scrollable-table-wrap">
+                <table id="checkTable">
+                    <thead>
+                        <tr><th>SKU</th><th>品名</th><th>系统</th><th>实盘</th><th>差异</th><th>原因</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="checkBody"></tbody>
+                </table>
+            </div>
+
+            <div class="action-stack">
+                <button class="main-btn" style="background:var(--success-color);" onclick="importExcel()"><span data-icon="upload" data-icon-size="20"></span> 导入Excel盘点表</button>
+                <button class="main-btn" style="background:var(--primary-color);" onclick="submitForReview()"><span data-icon="check-circle" data-icon-size="20"></span> 提交待审</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password bottom sheet -->
+    <div class="pwd-mask" id="pwdMask">
+        <div class="pwd-sheet">
+            <h3>🔐 主管复核确认</h3>
+            <div class="hint">请输入主管审批密码（模拟：123456）</div>
+            <input type="password" id="pwdInput" placeholder="请输入密码" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')confirmPassword()">
+            <div class="btns">
+                <button class="pwd-btn-cancel" onclick="closePwd()">取消</button>
+                <button class="pwd-btn-confirm" onclick="confirmPassword()">确认提交</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/common.js"></script>
+    <script src="../../js/api.js"></script>
+    <script src="js/mobile-icons.js"></script>
+    <script src="js/mobile-nav.js"></script>
+    <script src="js/mobile-scanner.js"></script>
+    <script src="js/mobile-toast.js"></script>
+    <script>
+        (function() {
+            var isEye = localStorage.getItem('eyeProtect') === 'true';
+            var btn = document.getElementById('eyeMobileBtn');
+            if (btn && window.renderMobileIcon) btn.innerHTML = window.renderMobileIcon(isEye ? 'sun' : 'moon', '20');
+        })();
+
+        var isLocked = false;
+        var PRODUCT_NAMES = { 'SPK-A100': '智能音箱 Pro', 'SPK-B200': '监控摄像头 4K', 'SPK-C300': '智能门锁 E1', 'SPK-D400': '无线耳机 T3', 'SPK-E500': '智能手表 S2' };
+        var REASONS = ['','盘盈','盘亏','损坏','丢失','其他'];
+
+        function renderCheckTable() {
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            var rows = '';
+            for (var i = 0; i < stockData.length; i++) {
+                var s = stockData[i];
+                var name = PRODUCT_NAMES[s.sku] || s.sku;
+                var wq = s.warehouse_qty || 0;
+                var reasonOpts = REASONS.map(function(r) { return '<option value="' + r + '">' + (r || '--') + '</option>'; }).join('');
+                rows += '<tr>' +
+                    '<td>' + s.sku + '</td><td>' + name + '</td><td class="sys-qty">' + wq + '</td>' +
+                    '<td><input type="number" class="real-qty" value="' + wq + '" inputmode="numeric" pattern="[0-9]*" oninput="autoCalcDiff(this)"></td>' +
+                    '<td class="diff-cell status-green">0</td>' +
+                    '<td><select class="reason-select-sm">' + reasonOpts + '</select></td>' +
+                    '<td><button class="scan-btn-sm" onclick="scanCheckItem(this)">扫码录入</button></td>' +
+                    '</tr>';
+            }
+            document.getElementById('checkBody').innerHTML = rows;
+        }
+
+        function toggleLock() {
+            isLocked = !isLocked;
+            var lb = document.getElementById('lockBar'), lt = document.getElementById('lockText'), lbtn = document.getElementById('lockBtn');
+            if (isLocked) {
+                lb.classList.add('locked'); lt.innerText = '已锁仓！盘点期间禁止库存变动'; lbtn.innerText = '解除锁仓'; lbtn.classList.add('locked');
+                addAuditLog('系统设置', '盘点锁仓', '未锁仓', '已锁仓');
+            } else {
+                lb.classList.remove('locked'); lt.innerText = '未锁仓！盘点期间库存变动将影响账实准确性'; lbtn.innerText = '点击锁仓'; lbtn.classList.remove('locked');
+                addAuditLog('系统设置', '解除盘点锁仓', '已锁仓', '未锁仓');
+            }
+        }
+
+        function autoCalcDiff(input) {
+            var row = input.closest('tr');
+            var sysQty = parseInt(row.querySelector('.sys-qty').textContent) || 0;
+            var realQty = parseInt(input.value) || 0;
+            var diff = realQty - sysQty;
+            var dc = row.querySelector('.diff-cell');
+            dc.textContent = diff; dc.className = 'diff-cell';
+            dc.classList.add(diff < 0 ? 'status-red' : diff > 0 ? 'status-red' : 'status-green');
+        }
+
+        function scanCheckItem(btn) {
+            var row = btn.closest('tr');
+            var input = row.querySelector('input.real-qty');
+            if (!input) return;
+            openScannerMobile(function(value) {
+                var scanned = parseInt(value) || 0;
+                if (isNaN(scanned) || scanned < 0) scanned = 0;
+                input.value = scanned; autoCalcDiff(input);
+            });
+        }
+
+        function importExcel() { alert('请选择Excel盘点表文件\n模拟导入成功，已自动填充实盘数量'); }
+
+        function collectDiffRows() {
+            var rows = document.querySelectorAll('#checkTable tbody tr');
+            var diffs = [];
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i];
+                var sku = r.children[0].textContent.trim();
+                var name = r.children[1].textContent.trim();
+                var sysQty = parseInt(r.querySelector('.sys-qty').textContent) || 0;
+                var realQty = parseInt(r.querySelector('input.real-qty').value) || 0;
+                var diff = realQty - sysQty;
+                var reason = r.querySelector('select').value;
+                diffs.push({ sku: sku, name: name, sysQty: sysQty, realQty: realQty, diff: diff, reason: reason });
+            }
+            return diffs;
+        }
+
+        function submitForReview() {
+            if (!isLocked) { showToast('请先锁仓再提交盘点结果！', 'warning'); return; }
+            var diffs = collectDiffRows();
+            var noReason = diffs.filter(function(d) { return d.diff !== 0 && !d.reason; });
+            if (noReason.length > 0) {
+                showToast('以下 SKU 有差异但未填写原因：' + noReason.map(function(d) { return d.sku + '(' + (d.diff>0?'+':'') + d.diff + ')'; }).join('，'), 'warning');
+                return;
+            }
+            document.getElementById('pwdMask').classList.add('show');
+            document.getElementById('pwdInput').value = '';
+            document.getElementById('pwdInput').focus();
+        }
+
+        function closePwd() { document.getElementById('pwdMask').classList.remove('show'); }
+
+        function confirmPassword() {
+            var pwd = document.getElementById('pwdInput').value;
+            if (pwd !== '123456') {
+                showToast('❌ 密码错误，提交失败！', 'error');
+                document.getElementById('pwdInput').value = '';
+                document.getElementById('pwdInput').focus();
+                return;
+            }
+            closePwd();
+
+            var diffs = collectDiffRows();
+            // Call backend API (start + submit)
+            API.startCheck({ operator: '王主管' }).then(function(res) {
+                return API.submitCheck(res.session_id, { items: diffs, reviewer: '林总', review_password: '123456' });
+            }).catch(function(){});
+            var history = JSON.parse(localStorage.getItem('checkHistory') || '[]');
+            history.unshift({ date: new Date().toLocaleString(), approver: '林总', items: diffs });
+            localStorage.setItem('checkHistory', JSON.stringify(history));
+
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            for (var i = 0; i < diffs.length; i++) {
+                var d = diffs[i];
+                for (var j = 0; j < stockData.length; j++) {
+                    if (stockData[j].sku === d.sku) {
+                        stockData[j].warehouse_qty = d.realQty;
+                        stockData[j].difference = stockData[j].website_qty - d.realQty;
+                        break;
+                    }
+                }
+            }
+            localStorage.setItem('stockData', JSON.stringify(stockData));
+
+            var summary = diffs.map(function(d) { return d.sku + ' ' + d.name + '：' + d.sysQty + '→' + d.realQty + ' (' + (d.diff>0?'+':'') + d.diff + ') ' + (d.reason||'无'); }).join('\n');
+            addAuditLog('库存调整', '月度盘点差异调整（主管复核通过）', '-', summary);
+            showToast('✅ 盘点结果已提交，主管复核通过！', 'success');
+        }
+
+        renderCheckTable();
+    </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卢米纳电子库存与财务一体化系统</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <h1 class="login-title">卢米纳电子库存与财务一体化系统</h1>
+            <p class="login-subtitle">第一阶段核心功能原型 V1.0</p>
+            
+            <div class="form-group">
+                <label>选择登录角色</label>
+                <select id="roleSelect" class="form-input">
+                    <option value="manager">COO 林总（管理层）</option>
+                    <option value="warehouse">仓库主管 王主管</option>
+                    <option value="finance">财务总监 陈总监</option>
+                </select>
+            </div>
+            
+            <button class="login-btn" onclick="login()">登录系统</button>
+            
+            <div class="login-tip">
+                提示：本原型为演示版本，无需输入密码，选择角色后直接登录
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        function login() {
+            const role = document.getElementById('roleSelect').value;
+            localStorage.setItem('currentRole', role);
+            // 初始化系统数据
+            initSystemData();
+            // 跳转到对应首页
+            if(role === 'manager') {
+                window.location.href = 'manager/index.html';
+            } else if(role === 'warehouse') {
+                window.location.href = 'warehouse/index.html';
+            } else if(role === 'finance') {
+                window.location.href = 'finance/index.html';
+            }
+        }
+    </script>
+</body>
+</html>

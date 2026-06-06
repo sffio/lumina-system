@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>API 诊断</title>
+<style>body{font-family:sans-serif;padding:20px;background:#f5f5f5;}
+.card{background:#fff;border-radius:8px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+.ok{color:green}.err{color:red}h2{margin-top:0}</style></head>
+<body>
+<h1>卢米纳电子 API 诊断</h1>
+<div id="results">检测中...</div>
+<script>
+var API_BASE = '/api/v1/warehouse';
+function apiGet(path) {
+  return fetch(API_BASE + path).then(function(r){return r.json();}).then(function(d){
+    if(d.code!==200) throw new Error(d.message);
+    return d.data;
+  });
+}
+var checks = [];
+function add(title, promise) {
+  checks.push({title:title, promise:promise});
+}
+add('库存列表 GET /inventory', apiGet('/inventory'));
+add('待发货订单 GET /orders/pending', apiGet('/orders/pending'));
+add('退货列表 GET /returns', apiGet('/returns'));
+add('仪表盘 GET /dashboard', apiGet('/dashboard'));
+add('变动历史 GET /stock-transactions', apiGet('/stock-transactions'));
+
+Promise.allSettled(checks.map(function(c){return c.promise.then(function(d){return {title:c.title,ok:true,data:d};}).catch(function(e){return {title:c.title,ok:false,error:e.message};});}))
+.then(function(results){
+  var html = '';
+  results.forEach(function(r){
+    var d = r.value;
+    if(d.ok){
+      var count = Array.isArray(d.data) ? d.data.length : (d.data.pending_orders_count !== undefined ? d.data.pending_orders_count + '订单/' + d.data.pending_returns_count + '退货' : 'OK');
+      html += '<div class="card"><h2 class="ok">✅ ' + d.title + '</h2><p>返回: ' + count + ' 条</p></div>';
+    } else {
+      html += '<div class="card"><h2 class="err">❌ ' + d.title + '</h2><p>错误: ' + d.error + '</p></div>';
+    }
+  });
+  document.getElementById('results').innerHTML = html;
+});
+</script>
+</body>
+</html>
