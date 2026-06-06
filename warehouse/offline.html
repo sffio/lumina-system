@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线应急模式 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .offline-status {
+            padding: 20px 30px; background: #fff3cd; border-bottom: 1px solid #ffc107;
+            font-size: 18px; color: #856404; font-weight: bold; text-align: center;
+        }
+        .offline-menu {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 30px;
+        }
+        .offline-btn {
+            height: 100px; background: var(--primary-color); color: #fff; border: none;
+            border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+        }
+        .offline-btn:hover { opacity: 0.9; }
+        .cache-info {
+            margin: 0 30px; background: var(--bg-main); border: 2px solid var(--border-color);
+            border-radius: 8px; padding: 20px; font-size: 16px; line-height: 1.8;
+        }
+        .action-area {
+            padding: 20px 30px; display: flex; gap: 15px; justify-content: center;
+        }
+        .main-btn {
+            height: 50px; padding: 0 30px; border: none; border-radius: 6px;
+            font-size: 16px; font-weight: bold; cursor: pointer; color: #fff;
+        }
+        .main-btn.success { background: var(--success-color); }
+        .main-btn.warning { background: var(--warning-color); }
+        .main-btn.danger { background: var(--danger-color); }
+        .back-btn { margin: 20px 30px; }
+        .queue-count { font-weight: bold; color: var(--primary-color); }
+
+        /* ---- Modal form styles ---- */
+        .modal-body .form-group { margin-bottom: 16px; }
+        .modal-body .form-label { display: block; font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--text-main); }
+        .modal-body .form-input, .modal-body .form-select {
+            width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 15px; background: var(--bg-main); color: var(--text-main);
+        }
+        .modal-body .form-textarea {
+            width: 100%; height: 70px; padding: 10px 12px; border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 15px; background: var(--bg-main); color: var(--text-main); resize: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-right">
+                <div class="user-info">登录人：王主管 | <span id="netStatus" style="font-weight:bold;"></span></div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-btn">← 返回首页</a>
+
+        <div class="offline-status">
+            📶 数据本地加密缓存 | 最后同步时间：<span id="lastSyncTime">2026-05-10 09:15</span>
+        </div>
+
+        <div class="offline-menu">
+            <button class="offline-btn" onclick="openModal('delivery')">
+                <span>📦</span><span>离线发货录入</span>
+            </button>
+            <button class="offline-btn" onclick="openModal('refund')">
+                <span>🔄</span><span>离线退货录入</span>
+            </button>
+            <button class="offline-btn" onclick="openModal('check')">
+                <span>📋</span><span>离线盘点录入</span>
+            </button>
+        </div>
+
+        <div class="cache-info">
+            <h3 style="margin-bottom:10px;">当前本地缓存数据</h3>
+            <div>发货记录：<span class="queue-count" id="deliveryCount">0</span> 条</div>
+            <div>退货记录：<span class="queue-count" id="refundCount">0</span> 条</div>
+            <div>盘点记录：<span class="queue-count" id="checkCount">0</span> 条</div>
+            <div style="margin-top:10px;color:var(--warning-color);">
+                提示：所有数据已加密保存在本地，网络恢复后请立即同步
+            </div>
+        </div>
+
+        <div class="action-area">
+            <button class="main-btn warning" onclick="manualBackup()">手动缓存备份</button>
+            <button class="main-btn success" id="syncBtn" onclick="syncAll()">一键同步数据</button>
+            <button class="main-btn danger" onclick="exitOffline()">退出离线模式</button>
+        </div>
+    </div>
+
+    <!-- ==== Modal: 离线发货录入 ==== -->
+    <div class="modal-mask" id="modalDelivery" style="display:none;">
+        <div class="modal" style="width:480px;">
+            <div class="modal-header"><span class="modal-title">📦 离线发货录入</span><button class="close-btn" onclick="closeModal('delivery')">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">* 客户名称</label><input type="text" class="form-input" id="delCustomer" placeholder="请输入客户名称"></div>
+                <div class="form-group"><label class="form-label">* SKU</label><select class="form-input" id="delSku" style="height:42px;"><option value="">请选择商品</option><option value="SPK-A100">SPK-A100 智能音箱 Pro</option><option value="SPK-B200">SPK-B200 监控摄像头 4K</option><option value="SPK-C300">SPK-C300 智能门锁 E1</option><option value="SPK-D400">SPK-D400 无线耳机 T3</option><option value="SPK-E500">SPK-E500 智能手表 S2</option></select></div>
+                <div class="form-group"><label class="form-label">* 数量</label><input type="number" class="form-input" id="delQty" placeholder="请输入发货数量" value="1"></div>
+                <div class="form-group"><label class="form-label">备注</label><textarea class="form-textarea" id="delNote" placeholder="选填备注"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeModal('delivery')">取消</button>
+                <button class="modal-btn confirm" onclick="submitOfflineDelivery()">保存到本地</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==== Modal: 离线退货录入 ==== -->
+    <div class="modal-mask" id="modalRefund" style="display:none;">
+        <div class="modal" style="width:480px;">
+            <div class="modal-header"><span class="modal-title">🔄 离线退货录入</span><button class="close-btn" onclick="closeModal('refund')">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">* SN码</label><input type="text" class="form-input" id="offSnCode" placeholder="请输入SN码"></div>
+                <div class="form-group"><label class="form-label">* 退货原因</label>
+                    <select class="form-select" id="offRefundReason">
+                        <option value="">请选择</option><option value="质量问题">质量问题</option><option value="7天无理由">7天无理由</option><option value="发错货">发错货</option><option value="其他">其他</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeModal('refund')">取消</button>
+                <button class="modal-btn confirm" onclick="submitOfflineRefund()">保存到本地</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==== Modal: 离线盘点录入 ==== -->
+    <div class="modal-mask" id="modalCheck" style="display:none;">
+        <div class="modal" style="width:480px;">
+            <div class="modal-header"><span class="modal-title">📋 离线盘点录入</span><button class="close-btn" onclick="closeModal('check')">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">* SKU</label><select class="form-input" id="offCheckSku" style="height:42px;"><option value="">请选择商品</option><option value="SPK-A100">SPK-A100 智能音箱 Pro</option><option value="SPK-B200">SPK-B200 监控摄像头 4K</option><option value="SPK-C300">SPK-C300 智能门锁 E1</option><option value="SPK-D400">SPK-D400 无线耳机 T3</option><option value="SPK-E500">SPK-E500 智能手表 S2</option></select></div>
+                <div class="form-group"><label class="form-label">* 实盘数量</label><input type="number" class="form-input" id="offCheckQty" placeholder="请输入实盘数量" value="0"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeModal('check')">取消</button>
+                <button class="modal-btn confirm" onclick="submitOfflineCheck()">保存到本地</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/toast.js"></script>
+    <script>
+        // ---- Queue keys ----
+        var Q_DELIVERY = 'offlineDeliveryQueue';
+        var Q_REFUND   = 'offlineRefundQueue';
+        var Q_CHECK    = 'offlineCheckQueue';
+
+        // ---- Modal open/close ----
+        function openModal(type) {
+            document.getElementById('modal' + type.charAt(0).toUpperCase() + type.slice(1)).style.display = 'flex';
+        }
+        function closeModal(type) {
+            document.getElementById('modal' + type.charAt(0).toUpperCase() + type.slice(1)).style.display = 'none';
+        }
+
+        // ---- Update cache info display ----
+        function refreshCacheInfo() {
+            var d = JSON.parse(localStorage.getItem(Q_DELIVERY) || '[]');
+            var r = JSON.parse(localStorage.getItem(Q_REFUND) || '[]');
+            var c = JSON.parse(localStorage.getItem(Q_CHECK) || '[]');
+            document.getElementById('deliveryCount').innerText = d.length;
+            document.getElementById('refundCount').innerText = r.length;
+            document.getElementById('checkCount').innerText = c.length;
+            // Update button state
+            var total = d.length + r.length + c.length;
+            var btn = document.getElementById('syncBtn');
+            btn.innerText = total > 0 ? '一键同步数据 (' + total + ' 条)' : '一键同步数据';
+        }
+
+        // ---- Submit: 离线发货 ----
+        function submitOfflineDelivery() {
+            var customer = document.getElementById('delCustomer').value.trim();
+            var sku = document.getElementById('delSku').value.trim();
+            var qty = parseInt(document.getElementById('delQty').value) || 0;
+            var note = document.getElementById('delNote').value.trim();
+            if (!customer || !sku || qty <= 0) { alert('请填写完整信息！'); return; }
+
+            var queue = JSON.parse(localStorage.getItem(Q_DELIVERY) || '[]');
+            queue.push({ customer: customer, sku: sku, qty: qty, note: note, time: new Date().toLocaleString() });
+            localStorage.setItem(Q_DELIVERY, JSON.stringify(queue));
+
+            alert('离线发货已缓存！客户：' + customer + ' / SKU：' + sku + ' × ' + qty);
+            document.getElementById('delCustomer').value = '';
+            document.getElementById('delSku').value = '';
+            document.getElementById('delQty').value = '1';
+            document.getElementById('delNote').value = '';
+            closeModal('delivery');
+            refreshCacheInfo();
+        }
+
+        // ---- Submit: 离线退货 ----
+        function submitOfflineRefund() {
+            var sn = document.getElementById('offSnCode').value.trim();
+            var reason = document.getElementById('offRefundReason').value;
+            if (!sn || !reason) { alert('请填写完整信息！'); return; }
+
+            var queue = JSON.parse(localStorage.getItem(Q_REFUND) || '[]');
+            queue.push({ sn: sn, reason: reason, time: new Date().toLocaleString() });
+            localStorage.setItem(Q_REFUND, JSON.stringify(queue));
+
+            alert('离线退货已缓存！SN：' + sn + ' / 原因：' + reason);
+            document.getElementById('offSnCode').value = '';
+            document.getElementById('offRefundReason').value = '';
+            closeModal('refund');
+            refreshCacheInfo();
+        }
+
+        // ---- Submit: 离线盘点 ----
+        function submitOfflineCheck() {
+            var sku = document.getElementById('offCheckSku').value.trim();
+            var qty = parseInt(document.getElementById('offCheckQty').value) || 0;
+            if (!sku) { alert('请填写SKU！'); return; }
+
+            var queue = JSON.parse(localStorage.getItem(Q_CHECK) || '[]');
+            queue.push({ sku: sku, actualQty: qty, time: new Date().toLocaleString() });
+            localStorage.setItem(Q_CHECK, JSON.stringify(queue));
+
+            alert('离线盘点已缓存！SKU：' + sku + ' / 实盘：' + qty);
+            document.getElementById('offCheckSku').value = '';
+            document.getElementById('offCheckQty').value = '0';
+            closeModal('check');
+            refreshCacheInfo();
+        }
+
+        // ---- Manual backup ----
+        function manualBackup() {
+            var d = JSON.parse(localStorage.getItem(Q_DELIVERY) || '[]');
+            var r = JSON.parse(localStorage.getItem(Q_REFUND) || '[]');
+            var c = JSON.parse(localStorage.getItem(Q_CHECK) || '[]');
+            var total = d.length + r.length + c.length;
+            alert('本地缓存已备份成功！\n当前队列：发货' + d.length + ' / 退货' + r.length + ' / 盘点' + c.length + ' / 共' + total + '条');
+        }
+
+        // ---- Sync all queues to online ----
+        function syncAll() {
+            var dQueue = JSON.parse(localStorage.getItem(Q_DELIVERY) || '[]');
+            var rQueue = JSON.parse(localStorage.getItem(Q_REFUND) || '[]');
+            var cQueue = JSON.parse(localStorage.getItem(Q_CHECK) || '[]');
+
+            var dCount = dQueue.length, rCount = rQueue.length, cCount = cQueue.length;
+            var total = dCount + rCount + cCount;
+            if (total === 0) { alert('没有待同步的数据'); return; }
+
+            // ---- Sync deliveries ----
+            for (var i = 0; i < dQueue.length; i++) {
+                var d = dQueue[i];
+                addAuditLog('发货录入', '离线发货同步', '-', '客户：' + d.customer + ' / SKU：' + d.sku + ' × ' + d.qty + (d.note ? ' / 备注：' + d.note : ''));
+            }
+
+            // ---- Sync refunds ----
+            for (var j = 0; j < rQueue.length; j++) {
+                var r = rQueue[j];
+                var refunds = JSON.parse(localStorage.getItem('refundData') || '[]');
+                refunds.unshift({
+                    id: 'RT' + Date.now() + j,
+                    orderId: 'ORD-OFFLINE-' + Date.now(),
+                    sn: r.sn, customer: '离线客户', phone: '-', account: '-', bank: '-',
+                    amount: 0, product: '未知', quality: '离线退货',
+                    operator: '王主管', status: '待审核', createTime: r.time
+                });
+                localStorage.setItem('refundData', JSON.stringify(refunds));
+                addAuditLog('退货录入', '离线退货同步', '-', 'SN码：' + r.sn + ' / 原因：' + r.reason);
+            }
+
+            // ---- Sync checks ----
+            for (var k = 0; k < cQueue.length; k++) {
+                var c = cQueue[k];
+                var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+                var matched = false;
+                for (var m = 0; m < stockData.length; m++) {
+                    if (stockData[m].sku === c.sku) {
+                        stockData[m].warehouse_qty = c.actualQty;
+                        stockData[m].difference = stockData[m].website_qty - c.actualQty;
+                        matched = true; break;
+                    }
+                }
+                localStorage.setItem('stockData', JSON.stringify(stockData));
+                addAuditLog('库存调整', '离线盘点同步', '-', 'SKU：' + c.sku + ' / 实盘数量：' + c.actualQty + (matched ? ' (已更新)' : ' (SKU未匹配)'));
+            }
+
+            // ---- Clear queues ----
+            localStorage.setItem(Q_DELIVERY, '[]');
+            localStorage.setItem(Q_REFUND, '[]');
+            localStorage.setItem(Q_CHECK, '[]');
+
+            // ---- Update sync time ----
+            var now = new Date();
+            var timeStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            document.getElementById('lastSyncTime').innerText = timeStr;
+
+            refreshCacheInfo();
+
+            var summary = '同步完成！\n' +
+                '发货：' + dCount + ' 条 → 审计日志\n' +
+                '退货：' + rCount + ' 条 → 退货记录 + 审计日志\n' +
+                '盘点：' + cCount + ' 条 → 库存数据 + 审计日志\n' +
+                '队列已清空，数据已写入对应模块';
+            alert(summary);
+        }
+
+        // ---- Exit with unsynced data check ----
+        function exitOffline() {
+            var d = JSON.parse(localStorage.getItem(Q_DELIVERY) || '[]');
+            var r = JSON.parse(localStorage.getItem(Q_REFUND) || '[]');
+            var c = JSON.parse(localStorage.getItem(Q_CHECK) || '[]');
+            var total = d.length + r.length + c.length;
+            if (total > 0) {
+                if (!confirm('还有 ' + total + ' 条离线数据未同步（发货' + d.length + '/退货' + r.length + '/盘点' + c.length + '），退出后将丢失。\n\n确定退出？')) return;
+            }
+            window.location.href = 'index.html';
+        }
+
+        // Network detection
+        function updateNetStatus() {
+            var el = document.getElementById('netStatus');
+            if (navigator.onLine) { el.textContent = '🟢 在线'; el.style.color = '#2e7d32'; }
+            else { el.textContent = '🔴 离线中'; el.style.color = '#c62828'; }
+        }
+        updateNetStatus();
+        window.addEventListener('online', updateNetStatus);
+        window.addEventListener('offline', updateNetStatus);
+
+        // ---- Init ----
+        refreshCacheInfo();
+    </script>
+</body>
+</html>

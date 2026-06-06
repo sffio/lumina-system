@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>B2B订单发货确认 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../../css/common.css">
+    <link rel="stylesheet" href="css/mobile-common.css">
+    <style>
+        .delivery-top-bar { height: 52px; min-height: 52px; background: var(--primary-color); color: #fff; display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
+        .delivery-top-bar .top-title { font-size: 16px; font-weight: 600; flex: 1; }
+        .status-badge { padding: 4px 12px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; background: var(--warning-color); }
+        .status-badge.done { background: var(--success-color); }
+        .order-select-card { padding: 12px 16px; background: #f0f4ff; border-bottom: 1px solid #d0d8f0; flex-shrink: 0; }
+        .order-select-card select { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 15px; background: var(--bg-main); font-family: var(--font-stack); }
+        .empty-msg-mobile { text-align: center; padding: 48px 20px; color: #999; font-size: 15px; }
+        #btnCancel { display: none !important; }
+        #btnCancel.show { display: flex !important; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="delivery-top-bar">
+            <a href="index.html" class="back-link-mobile" title="返回工作台" data-icon="chevron-left" data-icon-size="24"></a>
+            <span class="top-title">B2B订单发货详情</span>
+            <span class="status-badge" id="statusBadge">待发货</span>
+        </div>
+
+        <div class="order-select-card">
+            <select id="orderSelect" onchange="onOrderChange()"><option value="">-- 请选择待发货订单 --</option></select>
+        </div>
+
+        <div class="page-content">
+            <div id="emptyMsg" class="empty-msg-mobile"></div>
+            <div id="deliveryContent" style="display:none;">
+                <div class="review-card">
+                    <span class="review-card-label">库存扣减人工复核</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span class="switch-status-text on" id="switchText">已开启</span>
+                        <div class="toggle-switch-mobile open" id="reviewSwitch" onclick="toggleDirectMode()"><div class="toggle-dot"></div></div>
+                    </div>
+                </div>
+                <div class="order-info-card" id="orderInfo"></div>
+                <div class="status-tip-mobile wait" id="reviewStatusTip">待人工复核确认，复核通过后库存才会扣减</div>
+                <div class="line-items-section"><div class="line-items-title">发货明细</div><div id="lineItems"></div></div>
+                <div class="action-stack" id="actionArea">
+                    <button class="main-btn-mobile submit" id="btnSubmit" onclick="doSubmit()">提交发货复核申请</button>
+                    <button class="main-btn-mobile pass" id="btnReview" onclick="doReview()" style="display:none;">人工复核通过（确认扣减库存）</button>
+                    <button class="main-btn-mobile" id="btnDirect" onclick="doDirect()" style="display:none;background:var(--danger-color);">确认发货（直接扣减库存）</button>
+                    <button class="cancel-btn-mobile" id="btnCancel" onclick="resetButtons()" style="display:none;">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/common.js"></script>
+    <script src="../../js/api.js"></script>
+    <script src="js/mobile-icons.js"></script>
+    <script src="js/mobile-nav.js"></script>
+    <script src="js/mobile-scanner.js"></script>
+    <script src="js/mobile-toast.js"></script>
+    <script>
+        var currentOrder = null;  // currently displayed order
+        var isDirectMode = false; // review switch off = direct ship
+        var submitted = false;    // true after submit, false after reset/switch
+
+        var SKU_MAP = { 'SPK-100': 'SPK-A100', 'CAM-300': 'SPK-B200', 'MS-200': 'SPK-C300' };
+        var API_BASE = '/api/v1/warehouse';
+
+        function apiGet(p) { return fetch(API_BASE + p).then(function(r) { return r.json(); }).then(function(d) { return d.data; }); }
+        function apiPost(p, b) { return fetch(API_BASE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).then(function(r) { return r.json(); }).then(function(d) { if (d.code !== 200) throw new Error(d.message); return d.data; }); }
+
+        // Load pending orders from backend
+        function loadOrders() {
+            apiGet('/orders/pending').then(function(orders) {
+                var sel = document.getElementById('orderSelect');
+                sel.innerHTML = '<option value="">-- 请选择待发货订单 --</option>';
+                if (orders.length === 0) {
+                    showEmpty('暂无待发货订单');
+                    return;
+                }
+                orders.forEach(function(o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.id;
+                    opt.textContent = o.id + ' — ' + o.customer_name + ' ¥' + (o.total_amount / 10000).toFixed(0) + '万';
+                    sel.appendChild(opt);
+                });
+                // Auto-select first
+                sel.selectedIndex = 1;
+                onOrderChange();
+            }).catch(function(e) {
+                console.warn('加载订单失败:', e.message);
+                // Fallback to localStorage
+                var orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+                var pending = orders.filter(function(o) { return o.status === '待发货'; });
+                var sel = document.getElementById('orderSelect');
+                sel.innerHTML = '<option value="">-- 请选择待发货订单 --</option>';
+                pending.forEach(function(o) { var opt = document.createElement('option'); opt.value = o.id; opt.textContent = o.id + ' — ' + o.customer; sel.appendChild(opt); });
+                if (sel.options.length > 1) { sel.selectedIndex = 1; onOrderChange(); }
+                else showEmpty('暂无待发货订单');
+            });
+        }
+
+        function showEmpty(msg) {
+            document.getElementById('emptyMsg').innerText = msg;
+            document.getElementById('emptyMsg').style.display = 'block';
+            document.getElementById('deliveryContent').style.display = 'none';
+            currentOrder = null;
+        }
+
+        function onOrderChange() {
+            // FULL RESET — destroy all previous state, reset badge immediately
+            currentOrder = null;
+            submitted = false;
+            isDirectMode = false;
+            setBadge('待发货', 'warning');
+            resetButtons();
+            resetReviewSwitch();
+
+            var orderId = document.getElementById('orderSelect').value;
+            if (!orderId) { showEmpty('请在上方选择待发货订单'); return; }
+
+            // Fetch order detail
+            apiGet('/orders/' + orderId).then(function(detail) {
+                currentOrder = detail.order || detail;
+                if (!currentOrder || !currentOrder.items) {
+                    // Try localStorage
+                    var orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+                    currentOrder = orders.find(function(o) { return o.id === orderId; });
+                    if (!currentOrder) { showEmpty('订单未找到'); return; }
+                }
+                renderOrder();
+            }).catch(function() {
+                var orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+                currentOrder = orders.find(function(o) { return o.id === orderId; });
+                if (!currentOrder) { showEmpty('订单未找到'); return; }
+                renderOrder();
+            });
+        }
+
+        function renderOrder() {
+            if (!currentOrder) return;
+            document.getElementById('emptyMsg').style.display = 'none';
+            document.getElementById('deliveryContent').style.display = 'block';
+
+            var items = currentOrder.items || [];
+            var itemsSummary = items.map(function(it) { return it.name + ' ×' + it.qty; }).join('，');
+
+            // Customer name — handle both backend (customer_name) and frontend (customer) formats
+            var cust = currentOrder.customer_name || currentOrder.customer || '';
+            var amt = currentOrder.total_amount || currentOrder.amount || 0;
+            var od = currentOrder.order_date || currentOrder.orderDate || '';
+            var dd = currentOrder.due_date || currentOrder.dueDate || '';
+
+            document.getElementById('orderInfo').innerHTML =
+                '<div class="mobile-card-row"><span class="mobile-card-label">订单编号</span><span class="mobile-card-value">' + currentOrder.id + '</span></div>' +
+                '<div class="mobile-card-row"><span class="mobile-card-label">客户名称</span><span class="mobile-card-value">' + cust + '</span></div>' +
+                '<div class="mobile-card-row"><span class="mobile-card-label">签约日期</span><span class="mobile-card-value">' + od + '</span></div>' +
+                '<div class="mobile-card-row"><span class="mobile-card-label">总金额</span><span class="mobile-card-value">' + amt + '元</span></div>' +
+                '<div class="mobile-card-row"><span class="mobile-card-label">要求发货</span><span class="mobile-card-value">' + dd + '</span></div>' +
+                '<div class="mobile-card-row" style="border-top:1px dashed var(--border-light);padding-top:10px;"><span class="mobile-card-label">📦 商品</span><span class="mobile-card-value" style="color:var(--primary-color);">' + itemsSummary + '</span></div>';
+
+            var itemsHtml = '';
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                itemsHtml += '<div class="line-item-card">' +
+                    '<div class="line-item-header"><span class="line-item-sku">' + item.sku + '</span><span class="line-item-name">' + item.name + '</span></div>' +
+                    '<div class="line-item-row"><span>下单数量</span><span>' + item.qty + '</span></div>' +
+                    '<div class="line-item-row"><span>应发数量</span><span>' + item.qty + '</span></div>' +
+                    '<button class="line-scan-btn" onclick="openScannerMobile(function(v){ alert(\'已核对 ' + item.sku + ' / 编码：' + v + '\'); })"><span data-icon="scan" data-icon-size="18"></span> 扫码核对</button></div>';
+            }
+            document.getElementById('lineItems').innerHTML = itemsHtml;
+
+            setBadge('待发货', 'warning');
+            resetButtons();
+            resetReviewSwitch();
+            document.getElementById('reviewStatusTip').className = 'status-tip-mobile wait';
+            document.getElementById('reviewStatusTip').innerText = '待人工复核确认，复核通过后库存才会扣减';
+        }
+
+        function resetButtons() {
+            submitted = false;
+            document.getElementById('btnSubmit').style.display = 'flex';
+            document.getElementById('btnReview').style.display = 'none';
+            document.getElementById('btnDirect').style.display = 'none';
+            document.getElementById('btnCancel').classList.remove('show');
+        }
+
+        function setBadge(text, type) {
+            var b = document.getElementById('statusBadge');
+            b.textContent = text;
+            b.className = 'status-badge';
+            if (type === 'success') b.classList.add('done');
+            if (type === 'review') { b.style.background = '#ff9800'; b.style.color = '#fff'; }
+            else if (type !== 'success') { b.style.background = ''; b.style.color = ''; }
+        }
+
+        function resetReviewSwitch() {
+            isDirectMode = false;
+            document.getElementById('reviewSwitch').classList.add('open');
+            document.getElementById('switchText').innerText = '已开启';
+            document.getElementById('switchText').className = 'switch-status-text on';
+        }
+
+        function toggleDirectMode() {
+            isDirectMode = !isDirectMode;
+            document.getElementById('reviewSwitch').classList.toggle('open', !isDirectMode);
+            if (!isDirectMode) {
+                document.getElementById('switchText').innerText = '已开启';
+                document.getElementById('switchText').className = 'switch-status-text on';
+                document.getElementById('reviewStatusTip').className = 'status-tip-mobile wait';
+                document.getElementById('reviewStatusTip').innerText = '待人工复核确认，复核通过后库存才会扣减';
+                resetButtons();
+            } else {
+                document.getElementById('switchText').innerText = '已关闭';
+                document.getElementById('switchText').className = 'switch-status-text';
+                document.getElementById('switchText').style.color = 'var(--status-danger-text)';
+                document.getElementById('reviewStatusTip').className = 'status-tip-mobile danger';
+                document.getElementById('reviewStatusTip').innerText = '人工复核已关闭，确认发货将直接扣减库存';
+                document.getElementById('btnSubmit').style.display = 'none';
+                document.getElementById('btnReview').style.display = 'none';
+                document.getElementById('btnCancel').classList.remove('show');
+                document.getElementById('btnDirect').style.display = 'flex';
+            }
+        }
+
+        // Step 1: Submit for review
+        function doSubmit() {
+            if (!currentOrder || submitted) return;
+            submitted = true;
+            setBadge('待复核', 'review');
+            document.getElementById('btnSubmit').style.display = 'none';
+            document.getElementById('btnReview').style.display = 'flex';
+            document.getElementById('btnCancel').classList.add('show');
+            document.getElementById('reviewStatusTip').className = 'status-tip-mobile wait';
+            document.getElementById('reviewStatusTip').innerText = '已提交申请，待人工复核确认';
+            addAuditLog('发货申请', '提交发货申请 ' + currentOrder.id, '-', '待复核');
+        }
+
+        // Step 2: Review pass → call backend ship API
+        function doReview() {
+            if (!currentOrder || !submitted) return;
+
+            // Check stock first
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            var messages = [];
+            var items = currentOrder.items || [];
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                var stockSku = SKU_MAP[item.sku];
+                if (!stockSku) continue;
+                var stock = stockData.find(function(s) { return s.sku === stockSku; });
+                if (stock && stock.warehouse_qty < item.qty) {
+                    messages.push(item.sku + ' ' + item.name + '：需' + item.qty + '，库存' + stock.warehouse_qty);
+                }
+            }
+            if (messages.length > 0) {
+                showToast('⚠ 库存不足：' + messages.join('；'), 'warning');
+                return;
+            }
+
+            // Call backend API
+            document.getElementById('btnReview').disabled = true;
+            document.getElementById('btnReview').innerText = '正在提交...';
+
+            apiPost('/orders/' + currentOrder.id + '/ship', { operator: '王主管', mode: 'reviewed' }).then(function(result) {
+                showToast('发货成功！订单 ' + currentOrder.id + ' 已发货', 'success');
+                document.getElementById('reviewStatusTip').className = 'status-tip-mobile success';
+                document.getElementById('reviewStatusTip').innerText = '人工复核已通过，库存已正式扣减';
+                setBadge('已发货', 'success');
+                document.getElementById('btnReview').style.display = 'none';
+                document.getElementById('btnCancel').classList.remove('show');
+                document.getElementById('btnSubmit').style.display = 'flex';
+                document.getElementById('btnSubmit').innerText = '复核已完成';
+                document.getElementById('btnSubmit').disabled = true;
+                addAuditLog('库存变动', '确认发货 ' + currentOrder.id, '-', '订单状态：已发货');
+                // Reload order list after 1s
+                setTimeout(function() { loadOrders(); }, 1000);
+            }).catch(function(e) {
+                showToast('发货失败：' + e.message, 'error');
+                document.getElementById('btnReview').disabled = false;
+                document.getElementById('btnReview').innerText = '人工复核通过（确认扣减库存）';
+            });
+        }
+
+        // Direct ship (review switch off)
+        function doDirect() {
+            if (!currentOrder) return;
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            var messages = [];
+            var items = currentOrder.items || [];
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                var stockSku = SKU_MAP[item.sku];
+                if (!stockSku) continue;
+                var stock = stockData.find(function(s) { return s.sku === stockSku; });
+                if (stock && stock.warehouse_qty < item.qty) {
+                    messages.push(item.sku + ' ' + item.name + '：需' + item.qty + '，库存' + stock.warehouse_qty);
+                }
+            }
+            if (messages.length > 0) { showToast('⚠ 库存不足：' + messages.join('；'), 'warning'); return; }
+
+            document.getElementById('btnDirect').disabled = true;
+            document.getElementById('btnDirect').innerText = '正在提交...';
+            apiPost('/orders/' + currentOrder.id + '/ship', { operator: '王主管', mode: 'direct' }).then(function(result) {
+                showToast('发货成功！订单 ' + currentOrder.id + ' 已直接发货', 'success');
+                document.getElementById('reviewStatusTip').className = 'status-tip-mobile success';
+                document.getElementById('reviewStatusTip').innerText = '直接发货完成，库存已扣减';
+                setBadge('已发货', 'success');
+                document.getElementById('btnDirect').style.display = 'none';
+                addAuditLog('库存变动', '直接发货 ' + currentOrder.id, '-', '订单状态：已发货');
+                setTimeout(function() { loadOrders(); }, 1000);
+            }).catch(function(e) {
+                showToast('发货失败：' + e.message, 'error');
+                document.getElementById('btnDirect').disabled = false;
+                document.getElementById('btnDirect').innerText = '确认发货（直接扣减库存）';
+            });
+        }
+
+        // Init
+        loadOrders();
+    </script>
+</body>
+</html>

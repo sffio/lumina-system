@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库工作台 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 20px 30px; }
+        .metric-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .metric-title { font-size: 14px; color: var(--text-second); margin-bottom: 10px; font-weight: 500; }
+        .metric-value { font-size: 32px; font-weight: bold; line-height: 1.2; }
+        .metric-desc { font-size: 13px; color: var(--text-second); margin-top: 4px; }
+        .metric-value.red { color: var(--danger-color); }
+        .metric-value.yellow { color: var(--warning-color); }
+        .metric-value.green { color: var(--success-color); }
+        .quick-menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 30px 20px; }
+        .menu-btn { height: 80px; background: var(--primary-color); color: #fff; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+        .menu-btn.warning { background: var(--warning-color); }
+        .menu-btn.danger { background: var(--danger-color); }
+        .stock-table { margin: 0 30px 20px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; flex: 1; overflow: hidden; }
+        .check-reminder { margin: 0 30px 15px; padding: 12px 18px; background: #fff3e0; border: 1px solid var(--warning-color); border-radius: 6px; font-size: 14px; color: #e65100; display: flex; justify-content: space-between; align-items: center; }
+        .check-reminder button { height: 36px; padding: 0 16px; background: var(--warning-color); color: #fff; border: none; border-radius: 4px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .alert-none { text-align: center; padding: 30px; color: var(--success-color); font-size: 16px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-menu">
+                <div class="nav-item active">仓库工作台</div>
+                <div class="nav-item" onclick="window.location.href='delivery.html'">发货管理</div>
+                <div class="nav-item" onclick="window.location.href='refund.html'">退货录入</div>
+                <div class="nav-item" onclick="window.location.href='check.html'">库存盘点</div>
+                <div class="nav-item" onclick="window.location.href='stock.html'">库存总览</div>
+                <div class="nav-item" onclick="window.location.href='correct.html'">库存修正</div>
+                <div class="nav-item" onclick="window.location.href='offline.html'">离线模式</div>
+            </div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap"><span>护眼模式</span><div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()"><div class="eye-dot"></div></div></div>
+                <div class="user-info">登录人：王主管 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="metric-grid" id="metricGrid"></div>
+
+        <div class="quick-menu">
+            <button class="menu-btn" onclick="window.location.href='delivery.html'"><span>📦</span><span>待发货订单</span></button>
+            <button class="menu-btn" onclick="window.location.href='refund.html'"><span>🔄</span><span>退货录入</span></button>
+            <button class="menu-btn warning" onclick="window.location.href='check.html'"><span>📋</span><span>月度盘点</span></button>
+            <button class="menu-btn danger" onclick="window.location.href='offline.html'"><span>📶</span><span>紧急离线模式</span></button>
+        </div>
+
+        <div id="checkReminder"></div>
+
+        <div class="stock-table">
+            <div class="section-header">
+                <span>库存预警</span>
+                <button class="filter-btn export" onclick="exportToExcel('stockTable', '库存预警表')">导出Excel</button>
+            </div>
+            <div class="excel-table">
+                <table id="stockTable">
+                    <thead><tr><th>SKU</th><th>品名</th><th>仓库库存</th><th>线上库存</th><th>差异</th><th>状态</th></tr></thead>
+                    <tbody id="alertBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        var today = new Date();
+        document.getElementById('currentDate').innerText = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+        var PRODUCT_NAMES = {
+            'SPK-A100': '智能音箱 Pro', 'SPK-B200': '监控摄像头 4K', 'SPK-C300': '智能门锁 E1',
+            'SPK-D400': '无线耳机 T3', 'SPK-E500': '智能手表 S2'
+        };
+
+        // ---- Metrics (API with localStorage fallback) ----
+        function renderDashboard() {
+        var orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+        var pendingOrders = orders.filter(function(o) { return o.status === '待发货'; }).length;
+        var overdueOrders = orders.filter(function(o) { return o.status === '待发货' && o.dueDate < '2026-06-05'; }).length;
+
+        var refunds = JSON.parse(localStorage.getItem('refundData') || '[]');
+        var pendingRefunds = refunds.filter(function(r) { return r.status === '待审核'; }).length;
+
+        document.getElementById('metricGrid').innerHTML =
+            '<div class="metric-card">' +
+                '<div class="metric-title">今日待发货B2B订单</div>' +
+                '<div class="metric-value' + (pendingOrders > 0 ? ' red' : ' green') + '">' + pendingOrders + '</div>' +
+                '<div class="metric-desc">' + (overdueOrders > 0 ? overdueOrders + '笔超时未发货' : '全部正常') + '</div>' +
+            '</div>' +
+            '<div class="metric-card">' +
+                '<div class="metric-title">待处理退货</div>' +
+                '<div class="metric-value' + (pendingRefunds > 0 ? ' yellow' : ' green') + '">' + pendingRefunds + '</div>' +
+                '<div class="metric-desc">需财务审核处理</div>' +
+            '</div>';
+
+        // ---- Check reminder ----
+        var checkHistory = JSON.parse(localStorage.getItem('checkHistory') || '[]');
+        var thisMonth = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+        var hasCheckThisMonth = checkHistory.some(function(h) { return h.date && h.date.indexOf(thisMonth) !== -1; });
+        if (!hasCheckThisMonth) {
+            document.getElementById('checkReminder').innerHTML =
+                '<div class="check-reminder">' +
+                    '<span>⚠️ 本月暂无盘点记录，请尽快完成月度盘点</span>' +
+                    '<button onclick="window.location.href=\'check.html\'">前往盘点</button>' +
+                '</div>';
+        }
+
+        // ---- Alert table ----
+        var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+        var alerts = stockData.filter(function(s) {
+            return s.difference !== 0 || s.warehouse_qty < 5;
+        });
+        var alertHtml = '';
+        if (alerts.length === 0) {
+            alertHtml = '<tr><td colspan="6" class="alert-none">✅ 所有商品库存正常，无预警项</td></tr>';
+        } else {
+            for (var i = 0; i < alerts.length; i++) {
+                var s = alerts[i];
+                var name = PRODUCT_NAMES[s.sku] || s.sku;
+                var diff = s.difference || 0;
+                var wQty = s.warehouse_qty || 0;
+                var wQty2 = s.website_qty || 0;
+                var diffSign = diff > 0 ? '+' : '';
+                var statusText, statusCls;
+                if (diff > 0) { statusText = '超卖'; statusCls = 'status-red'; }
+                else if (diff < 0) { statusText = '待同步'; statusCls = 'status-yellow'; }
+                else { statusText = '低库存'; statusCls = 'status-yellow'; }
+                alertHtml += '<tr>' +
+                    '<td>' + s.sku + '</td><td>' + name + '</td>' +
+                    '<td class="num-cell">' + wQty + '</td><td class="num-cell">' + wQty2 + '</td>' +
+                    '<td class="' + (diff > 0 ? 'status-red' : diff < 0 ? 'status-yellow' : 'status-yellow') + '">' + diffSign + diff + '</td>' +
+                    '<td class="' + statusCls + '">' + statusText + '</td></tr>';
+            }
+        }
+        document.getElementById('alertBody').innerHTML = alertHtml;
+        }
+        // Sync from backend, then render
+        syncFromBackend().then(function() { renderDashboard(); });
+    </script>
+</body>
+</html>
