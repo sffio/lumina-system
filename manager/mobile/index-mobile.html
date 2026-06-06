@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CEO运营看板 - 卢米纳电子</title>
+    <style>
+        /* 基础变量（完全沿用原系统配色） */
+        :root {
+            --bg-main: #ffffff;
+            --bg-second: #f5f5f5;
+            --text-main: #000000;
+            --text-second: #333333;
+            --border-color: #999999;
+            --primary-color: #0078d4;
+            --danger-color: #d93025;
+            --warning-color: #f57c00;
+            --success-color: #0f9d58;
+            --table-border: #dddddd;
+            --tab-bg: #ffffff;
+            --tab-border: #dddddd;
+        }
+        
+        .eye-protect {
+            --bg-main: #f8f9f0;
+            --bg-second: #f0f2e6;
+            --text-main: #222222;
+            --text-second: #444444;
+            --border-color: #888888;
+            --primary-color: #2b78b2;
+            --danger-color: #c43a31;
+            --warning-color: #e07020;
+            --success-color: #2b8a50;
+            --table-border: #cccccc;
+            --tab-bg: #f8f9f0;
+            --tab-border: #cccccc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+        }
+        
+        /* 核心：全局尺寸锁定，PC端居中显示手机样式 */
+        body {
+            background: #e5e5e5;
+            transition: background 0.3s;
+            padding-bottom: 55px;
+            min-height: 100vh;
+        }
+        
+        /* 手机屏幕容器（固定最大宽度430px，PC端居中） */
+        .phone-screen {
+            width: 100%;
+            max-width: 430px;
+            min-height: 100vh;
+            margin: 0 auto;
+            background: var(--bg-second);
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* 顶部导航（固定高度，移动端尺寸） */
+        .top-nav {
+            height: 50px;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background 0.3s;
+        }
+        
+        .nav-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .eye-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .eye-switch {
+            width: 40px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        
+        .eye-switch.active .eye-dot {
+            left: 18px;
+        }
+        
+        .eye-dot {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            transition: 0.3s;
+        }
+        
+        .user-info {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        /* 核心指标卡片（固定双列布局，不会变成4列） */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 15px;
+        }
+        
+        .metric-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .metric-title {
+            font-size: 12px;
+            color: var(--text-second);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        
+        .metric-value.red { color: var(--danger-color); }
+        .metric-value.yellow { color: var(--warning-color); }
+        .metric-value.green { color: var(--success-color); }
+        
+        .metric-desc {
+            font-size: 10px;
+            margin-top: 5px;
+            color: var(--text-second);
+            line-height: 1.2;
+        }
+        
+        /* 紧急按钮（固定双列） */
+        .urgent-btn-wrap {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 0 15px 15px;
+        }
+        
+        .urgent-btn {
+            height: 44px;
+            background: var(--danger-color);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        /* 主内容区（固定单列布局） */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 0 15px 15px;
+        }
+        
+        .section {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .section-header {
+            height: 40px;
+            background: var(--bg-second);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-main);
+            transition: all 0.3s;
+        }
+        
+        .more-btn {
+            font-size: 12px;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .todo-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .todo-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--table-border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        
+        .todo-content {
+            font-size: 14px;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+        
+        .todo-tag {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+            margin-left: 5px;
+        }
+        
+        .todo-tag.red { background: var(--danger-color); }
+        .todo-tag.yellow { background: var(--warning-color); }
+        
+        .todo-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #fff;
+            font-weight: 500;
+            align-self: flex-end;
+        }
+        
+        .todo-btn.danger { background: var(--danger-color); }
+        .todo-btn.primary { background: var(--primary-color); }
+        
+        /* 底部固定Tab栏（永久显示，不会在PC端隐藏） */
+        .bottom-tabbar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            height: 55px;
+            background: var(--tab-bg);
+            border-top: 1px solid var(--tab-border);
+            display: flex;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-second);
+            cursor: pointer;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .tab-item.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        
+        .empty-state {
+            padding: 30px;
+            text-align: center;
+            color: var(--text-second);
+            font-size: 14px;
+        }
+        
+        /* 通用弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: var(--bg-main);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-second);
+        }
+        
+        .modal-body {
+            padding: 15px;
+        }
+        
+        .modal-footer {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .modal-btn.cancel {
+            background: var(--bg-second);
+            color: var(--text-main);
+        }
+        
+        .modal-btn.confirm {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        
+        .detail-item {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-screen">
+        <!-- 顶部导航 -->
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子</div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">林总 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <!-- 核心指标区 -->
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">今日超卖次数</div>
+                <div class="metric-value green" id="todayOverSell">0</div>
+                <div class="metric-desc">目标：归零 | 连续3天无超卖</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">库存差异率</div>
+                <div class="metric-value red" id="stockDiffRate">4.2%</div>
+                <div class="metric-desc">审计红线：≤3% | 超合规红线</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">本月销售额</div>
+                <div class="metric-value" id="monthSales">187.6万</div>
+                <div class="metric-desc">实时对接全渠道系统</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">当日发货率</div>
+                <div class="metric-value green" id="deliveryRate">98.6%</div>
+                <div class="metric-desc">当日达目标</div>
+            </div>
+        </div>
+
+        <!-- 紧急操作按钮 -->
+        <div class="urgent-btn-wrap">
+            <button class="urgent-btn" onclick="window.location.href='supervise-mobile.html'">强制调货督办</button>
+            <button class="urgent-btn" onclick="window.location.href='order-mobile.html'">大客户加单</button>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="section">
+                <div class="section-header">
+                    <span>异常预警</span>
+                    <a href="warning-mobile.html" class="more-btn">查看全部</a>
+                </div>
+                <div class="todo-list" id="warningPreviewList">
+                    <!-- 异常预警数据将从localStorage动态加载 -->
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <span>待处理事项</span>
+                </div>
+                <div class="todo-list">
+                    <div class="todo-item">
+                        <div class="todo-content">
+                            退款审核：ORD20260428005 | 客户：张三
+                            <span class="todo-tag red">超时1天</span>
+                        </div>
+                        <button class="todo-btn danger" onclick="openTodoDetail(1)">立即处理</button>
+                    </div>
+                    <div class="todo-item">
+                        <div class="todo-content">
+                            应收款预警：华为技术 | 15万
+                            <span class="todo-tag yellow">逾期15天</span>
+                        </div>
+                        <button class="todo-btn primary" onclick="openTodoDetail(2)">立即处理</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部固定Tab栏（与手机屏幕同宽，PC端居中） -->
+    <div class="bottom-tabbar">
+        <a href="index-mobile.html" class="tab-item active">
+            <div class="tab-icon">📊</div>
+            <div>运营看板</div>
+        </a>
+        <a href="warning-mobile.html" class="tab-item">
+            <div class="tab-icon">⚠️</div>
+            <div>异常预警</div>
+        </a>
+        <a href="supervise-mobile.html" class="tab-item">
+            <div class="tab-icon">📋</div>
+            <div>决策督办</div>
+        </a>
+        <a href="order-mobile.html" class="tab-item">
+            <div class="tab-icon">📦</div>
+            <div>大客户订单</div>
+        </a>
+    </div>
+
+    <!-- 待办事项详情弹窗 -->
+    <div class="modal-overlay" id="todoDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="todoDetailTitle">待办事项详情</div>
+                <div class="modal-close" onclick="closeTodoDetail()">×</div>
+            </div>
+            <div class="modal-body" id="todoDetailContent">
+                <!-- 详情内容将动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeTodoDetail()">关闭</button>
+                <button class="modal-btn confirm" onclick="handleTodo()">确认处理</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 自动填充当前日期
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        
+        // 护眼模式切换（与原系统完全兼容）
+        function toggleEyeProtect() {
+            const html = document.documentElement;
+            const switchEl = document.getElementById('eyeSwitch');
+            let isEyeProtect = localStorage.getItem('eyeProtect') === 'true';
+            isEyeProtect = !isEyeProtect;
+            localStorage.setItem('eyeProtect', isEyeProtect);
+            switchEl.classList.toggle('active', isEyeProtect);
+            html.classList.toggle('eye-protect', isEyeProtect);
+        }
+
+        // 页面加载时应用护眼模式
+        window.addEventListener('DOMContentLoaded', function() {
+            const isEyeProtect = localStorage.getItem('eyeProtect') === 'true';
+            const html = document.documentElement;
+            const switchEl = document.getElementById('eyeSwitch');
+            if(isEyeProtect) {
+                html.classList.add('eye-protect');
+                switchEl.classList.add('active');
+            }
+            
+            // 加载异常预警预览数据
+            loadWarningPreview();
+        });
+        
+        // 从localStorage加载异常预警预览（只显示前2条）
+        function loadWarningPreview() {
+            // 初始化默认异常数据（如果不存在）
+            if(!localStorage.getItem('warningData')) {
+                const defaultWarnings = [
+                    {
+                        id: 1,
+                        title: "超卖风险预警",
+                        content: "SKU: SPK100 智能音箱<br>前端可售库存显示异常，存在超卖风险<br>仓库实际库存：241件 | 网站显示库存：259件 | 差异：18件",
+                        level: "highest",
+                        type: "oversell",
+                        department: "电商部+仓库部",
+                        time: "2026-05-06 09:30"
+                    },
+                    {
+                        id: 2,
+                        title: "库存差异率超审计红线",
+                        content: "当前差异率：4.2%<br>合规红线：≤3%<br>已连续7天超合规红线，7月审计前必须完成整改",
+                        level: "high",
+                        type: "audit",
+                        department: "仓库部+财务部",
+                        time: "2026-05-06 08:00"
+                    },
+                    {
+                        id: 3,
+                        title: "B2B订单超时未发货",
+                        content: "客户：华为技术有限公司<br>订单编号：B2B20260401001<br>应发货日期：2026-05-04 | 已超时2天",
+                        level: "high",
+                        type: "timeout",
+                        department: "仓库部 王主管",
+                        time: "2026-05-04 08:00"
+                    }
+                ];
+                localStorage.setItem('warningData', JSON.stringify(defaultWarnings));
+            }
+            
+            const warnings = JSON.parse(localStorage.getItem('warningData') || '[]');
+            const previewList = document.getElementById('warningPreviewList');
+            
+            if(warnings.length === 0) {
+                previewList.innerHTML = '<div class="empty-state">很好，暂无任何异常！</div>';
+                return;
+            }
+            
+            // 只显示前2条
+            const previewWarnings = warnings.slice(0, 2);
+            let html = '';
+            
+            previewWarnings.forEach(warning => {
+                const levelClass = warning.level === 'highest' ? 'red' : 'yellow';
+                const levelText = warning.level === 'highest' ? '最高优先级' : 
+                                 warning.level === 'high' ? '审计风险' : '超时预警';
+                
+                html += `
+                <div class="todo-item">
+                    <div class="todo-content">
+                        ${warning.title}
+                        <span class="todo-tag ${levelClass}">${levelText}</span>
+                    </div>
+                    <button class="todo-btn primary" onclick="window.location.href='warning-mobile.html'">查看详情</button>
+                </div>
+                `;
+            });
+            
+            previewList.innerHTML = html;
+        }
+        
+        // 打开待办事项详情
+        function openTodoDetail(id) {
+            const todoData = {
+                1: {
+                    title: "退款审核：ORD20260428005",
+                    content: [
+                        {label: "客户名称", value: "张三"},
+                        {label: "订单金额", value: "2999元"},
+                        {label: "退款原因", value: "商品质量问题"},
+                        {label: "申请时间", value: "2026-05-04 14:30"},
+                        {label: "应处理时间", value: "2026-05-05 14:30"},
+                        {label: "当前状态", value: "超时1天"}
+                    ]
+                },
+                2: {
+                    title: "应收款预警：华为技术有限公司",
+                    content: [
+                        {label: "客户名称", value: "华为技术有限公司"},
+                        {label: "应收金额", value: "150000元"},
+                        {label: "合同编号", value: "HT20260315001"},
+                        {label: "应付款日期", value: "2026-04-20"},
+                        {label: "当前状态", value: "逾期15天"},
+                        {label: "联系人", value: "李经理 13800138000"}
+                    ]
+                }
+            };
+            
+            const todo = todoData[id];
+            document.getElementById('todoDetailTitle').innerText = todo.title;
+            
+            let contentHtml = '';
+            todo.content.forEach(item => {
+                contentHtml += `
+                <div class="detail-item">
+                    <span class="detail-label">${item.label}：</span>
+                    <span>${item.value}</span>
+                </div>
+                `;
+            });
+            
+            document.getElementById('todoDetailContent').innerHTML = contentHtml;
+            document.getElementById('todoDetailModal').style.display = 'flex';
+        }
+        
+        // 关闭待办事项详情
+        function closeTodoDetail() {
+            document.getElementById('todoDetailModal').style.display = 'none';
+        }
+        
+        // 处理待办事项
+        function handleTodo() {
+            alert('处理成功！该事项已标记为已处理');
+            closeTodoDetail();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>决策督办 - 卢米纳电子</title>
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-second: #f5f5f5;
+            --text-main: #000000;
+            --text-second: #333333;
+            --border-color: #999999;
+            --primary-color: #0078d4;
+            --danger-color: #d93025;
+            --warning-color: #f57c00;
+            --success-color: #0f9d58;
+            --table-border: #dddddd;
+            --tab-bg: #ffffff;
+            --tab-border: #dddddd;
+        }
+        
+        .eye-protect {
+            --bg-main: #f8f9f0;
+            --bg-second: #f0f2e6;
+            --text-main: #222222;
+            --text-second: #444444;
+            --border-color: #888888;
+            --primary-color: #2b78b2;
+            --danger-color: #c43a31;
+            --warning-color: #e07020;
+            --success-color: #2b8a50;
+            --table-border: #cccccc;
+            --tab-bg: #f8f9f0;
+            --tab-border: #cccccc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+        }
+        
+        body {
+            background: #e5e5e5;
+            transition: background 0.3s;
+            padding-bottom: 55px;
+            min-height: 100vh;
+        }
+        
+        .phone-screen {
+            width: 100%;
+            max-width: 430px;
+            min-height: 100vh;
+            margin: 0 auto;
+            background: var(--bg-second);
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        .top-nav {
+            height: 50px;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background 0.3s;
+        }
+        
+        .nav-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .eye-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .eye-switch {
+            width: 40px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        
+        .eye-switch.active .eye-dot {
+            left: 18px;
+        }
+        
+        .eye-dot {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            transition: 0.3s;
+        }
+        
+        .user-info {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .filter-bar {
+            padding: 10px 15px;
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .filter-btn.export {
+            padding: 6px 12px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 15px;
+        }
+        
+        .metric-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 10px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .metric-card.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0,120,212,0.2);
+        }
+        
+        .metric-value {
+            font-size: 22px;
+            font-weight: bold;
+            line-height: 1.2;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value.red { color: var(--danger-color); }
+        .metric-value.green { color: var(--success-color); }
+        .metric-value.blue { color: var(--primary-color); }
+        
+        .metric-title {
+            font-size: 10px;
+            color: var(--text-second);
+            font-weight: 500;
+        }
+        
+        .add-btn {
+            margin: 0 15px 15px;
+            height: 40px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            width: calc(100% - 30px);
+        }
+        
+        .supervise-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 15px 15px;
+        }
+        
+        .supervise-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .supervise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .supervise-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        
+        .status-tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .status-tag.doing { background: var(--primary-color); }
+        .status-tag.done { background: var(--success-color); }
+        .status-tag.over { background: var(--danger-color); }
+        
+        .supervise-content {
+            font-size: 13px;
+            color: var(--text-second);
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-second);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        .progress-fill.red { background: var(--danger-color); }
+        .progress-fill.green { background: var(--success-color); }
+        
+        .supervise-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .supervise-info {
+            font-size: 12px;
+            color: var(--text-second);
+        }
+        
+        .detail-btn {
+            padding: 8px 0;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #fff;
+            background: var(--primary-color);
+            font-weight: 500;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .bottom-tabbar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            height: 55px;
+            background: var(--tab-bg);
+            border-top: 1px solid var(--tab-border);
+            display: flex;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        
+        .tab-item-bottom {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-second);
+            cursor: pointer;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .tab-item-bottom.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        
+        /* 弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: var(--bg-main);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-second);
+        }
+        
+        .modal-body {
+            padding: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            height: 40px;
+            padding: 0 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        .modal-footer {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .modal-btn.cancel {
+            background: var(--bg-second);
+            color: var(--text-main);
+        }
+        
+        .modal-btn.confirm {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        
+        .empty-state {
+            padding: 50px 20px;
+            text-align: center;
+            color: var(--text-second);
+            font-size: 16px;
+        }
+        
+        .detail-item {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        
+        .progress-input {
+            width: 100%;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-screen">
+        <div class="top-nav">
+            <div class="nav-title">决策督办</div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">林总 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <button class="filter-btn export" onclick="exportToExcel('superviseTable', '决策督办进度')">导出Excel</button>
+        </div>
+
+        <div class="metric-grid">
+            <div class="metric-card active" data-status="all">
+                <div class="metric-value blue" id="totalCount">9</div>
+                <div class="metric-title">总事项</div>
+            </div>
+            <div class="metric-card" data-status="done">
+                <div class="metric-value green" id="doneCount">3</div>
+                <div class="metric-title">已完成</div>
+            </div>
+            <div class="metric-card" data-status="doing">
+                <div class="metric-value blue" id="doingCount">2</div>
+                <div class="metric-title">进行中</div>
+            </div>
+            <div class="metric-card" data-status="over">
+                <div class="metric-value red" id="overCount">4</div>
+                <div class="metric-title">已超时</div>
+            </div>
+        </div>
+
+        <button class="add-btn" onclick="openAddModal()">【新增紧急督办事项】</button>
+
+        <div class="supervise-list" id="superviseList">
+            <!-- 督办事项将从localStorage动态加载 -->
+        </div>
+
+        <table id="superviseTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>督办事项</th>
+                    <th>状态</th>
+                    <th>责任部门</th>
+                    <th>要求完成时间</th>
+                    <th>当前进度</th>
+                </tr>
+            </thead>
+            <tbody id="superviseTableBody">
+                <!-- 导出数据将动态生成 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 新增督办弹窗 -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">新增紧急督办事项</div>
+                <div class="modal-close" onclick="closeAddModal()">×</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">事项标题</label>
+                    <input type="text" class="form-input" id="taskTitle" placeholder="请输入督办事项标题">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">核心要求</label>
+                    <textarea class="form-textarea" id="taskContent" placeholder="请输入核心要求和说明"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">责任部门</label>
+                    <input type="text" class="form-input" id="taskDepartment" placeholder="请输入责任部门">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">要求完成时间</label>
+                    <input type="date" class="form-input" id="taskDeadline">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeAddModal()">取消</button>
+                <button class="modal-btn confirm" onclick="addTask()">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 督办详情弹窗 -->
+    <div class="modal-overlay" id="taskDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="taskDetailTitle">督办事项详情</div>
+                <div class="modal-close" onclick="closeTaskDetail()">×</div>
+            </div>
+            <div class="modal-body" id="taskDetailContent">
+                <!-- 详情内容将动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeTaskDetail()">关闭</button>
+                <button class="modal-btn confirm" onclick="updateTaskProgress()">更新进度</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-tabbar">
+        <a href="index-mobile.html" class="tab-item-bottom">
+            <div class="tab-icon">📊</div>
+            <div>运营看板</div>
+        </a>
+        <a href="warning-mobile.html" class="tab-item-bottom">
+            <div class="tab-icon">⚠️</div>
+            <div>异常预警</div>
+        </a>
+        <a href="supervise-mobile.html" class="tab-item-bottom active">
+            <div class="tab-icon">📋</div>
+            <div>决策督办</div>
+        </a>
+        <a href="order-mobile.html" class="tab-item-bottom">
+            <div class="tab-icon">📦</div>
+            <div>大客户订单</div>
+        </a>
+    </div>
+
+    <script>
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        
+        // 当前选中的状态
+        let currentStatus = 'all';
+        // 当前选中的任务ID
+        let currentTaskId = null;
+        
+        // 统计卡片点击事件
+        const metricCards = document.querySelectorAll('.metric-card');
+        metricCards.forEach(card => {
+            card.addEventListener('click', function() {
+                metricCards.forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                currentStatus = this.dataset.status;
+                loadSuperviseList();
+            });
+        });
+        
+        function toggleEyeProtect() {
+            const html = document.documentElement;
+            const switchEl = document.getElementById('eyeSwitch');
+            let isEyeProtect = localStorage.getItem('eyeProtect') === 'true';
+            isEyeProtect = !isEyeProtect;
+            localStorage.setItem('eyeProtect', isEyeProtect);
+            switchEl.classList.toggle('active', isEyeProtect);
+            html.classList.toggle('eye-protect', isEyeProtect);
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const isEyeProtect = localStorage.getItem('eyeProtect') === 'true';
+            const html = document.documentElement;
+            const switchEl = document.getElementById('eyeSwitch');
+            if(isEyeProtect) {
+                html.classList.add('eye-protect');
+                switchEl.classList.add('active');
+            }
+            
+            // 初始化默认督办数据
+            if(!localStorage.getItem('superviseData')) {
+                const defaultTasks = [
+                    {
+                        id: 1,
+                        title: "库存差异率降至3%以内",
+                        content: "核心要求：两周内将库存差异率降至3%以下，7月审计前完成整改",
+                        status: "doing",
+                        progress: 40,
+                        department: "仓库部+财务部",
+                        deadline: "2026-06-30",
+                        createTime: "2026-05-01"
+                    },
+                    {
+                        id: 2,
+                        title: "线上超卖事件归零",
+                        content: "核心要求：电商与仓库实时库存同步，彻底杜绝超卖现象",
+                        status: "doing",
+                        progress: 75,
+                        department: "电商部+仓库部",
+                        deadline: "2026-06-30",
+                        createTime: "2026-05-05"
+                    },
+                    {
+                        id: 3,
+                        title: "库存系统核心功能上线",
+                        content: "核心要求：6月30日前完成第一阶段核心功能上线",
+                        status: "doing",
+                        progress: 60,
+                        department: "项目组",
+                        deadline: "2026-06-30",
+                        createTime: "2026-05-10"
+                    },
+                    {
+                        id: 4,
+                        title: "华为15万应收款催收",
+                        content: "核心要求：5月20日前收回华为技术有限公司15万逾期应收款",
+                        status: "over",
+                        progress: 20,
+                        department: "财务部+销售部",
+                        deadline: "2026-05-20",
+                        createTime: "2026-05-01"
+                    }
+                ];
+                localStorage.setItem('superviseData', JSON.stringify(defaultTasks));
+            }
+            
+            // 加载统计数据和列表
+            updateStats();
+            loadSuperviseList();
+        });
+        
+        // 更新统计数据
+        function updateStats() {
+            const tasks = JSON.parse(localStorage.getItem('superviseData') || '[]');
+            
+            const total = tasks.length;
+            const done = tasks.filter(t => t.status === 'done').length;
+            const doing = tasks.filter(t => t.status === 'doing').length;
+            const over = tasks.filter(t => t.status === 'over').length;
+            
+            document.getElementById('totalCount').innerText = total;
+            document.getElementById('doneCount').innerText = done;
+            document.getElementById('doingCount').innerText = doing;
+            document.getElementById('overCount').innerText = over;
+        }
+        
+        // 加载督办列表
+        function loadSuperviseList() {
+            const allTasks = JSON.parse(localStorage.getItem('superviseData') || '[]');
+            const superviseList = document.getElementById('superviseList');
+            
+            // 根据当前状态过滤
+            let filteredTasks = allTasks;
+            if(currentStatus !== 'all') {
+                filteredTasks = allTasks.filter(t => t.status === currentStatus);
+            }
+            
+            if(filteredTasks.length === 0) {
+                superviseList.innerHTML = '<div class="empty-state">暂无相关督办事项</div>';
+                return;
+            }
+            
+            let html = '';
+            filteredTasks.forEach(task => {
+                const statusClass = task.status === 'done' ? 'done' : 
+                                  task.status === 'doing' ? 'doing' : 'over';
+                const progressClass = task.status === 'done' ? 'green' : 
+                                     task.status === 'over' ? 'red' : '';
+                const statusText = task.status === 'done' ? '已完成' : 
+                                  task.status === 'doing' ? '进行中' : '已超时';
+                
+                html += `
+                <div class="supervise-card">
+                    <div class="supervise-header">
+                        <span class="supervise-title">${task.title}</span>
+                        <span class="status-tag ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="supervise-content">
+                        ${task.content}<br>
+                        责任部门：${task.department}<br>
+                        要求完成时间：${task.deadline}
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${progressClass}" style="width: ${task.progress}%"></div>
+                    </div>
+                    <div class="supervise-footer">
+                        <div class="supervise-info">
+                            当前进度：${task.progress}%
+                        </div>
+                        <button class="detail-btn" onclick="openTaskDetail(${task.id})">查看详情</button>
+                    </div>
+                </div>
+                `;
+            });
+            
+            superviseList.innerHTML = html;
+            
+            // 更新导出表格数据
+            updateExportTable(filteredTasks);
+        }
+        
+        // 更新导出表格数据
+        function updateExportTable(tasks) {
+            const tableBody = document.getElementById('superviseTableBody');
+            let html = '';
+            tasks.forEach(task => {
+                const statusText = task.status === 'done' ? '已完成' : 
+                                  task.status === 'doing' ? '进行中' : '已超时';
+                html += `
+                <tr>
+                    <td>${task.title}</td>
+                    <td>${statusText}</td>
+                    <td>${task.department}</td>
+                    <td>${task.deadline}</td>
+                    <td>${task.progress}%</td>
+                </tr>
+                `;
+            });
+            tableBody.innerHTML = html;
+        }
+        
+        // 打开新增弹窗
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'flex';
+            // 设置默认日期为今天+7天
+            const defaultDate = new Date();
+            defaultDate.setDate(defaultDate.getDate() + 7);
+            document.getElementById('taskDeadline').value = defaultDate.toISOString().split('T')[0];
+        }
+        
+        // 关闭新增弹窗
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+            // 清空表单
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskContent').value = '';
+            document.getElementById('taskDepartment').value = '';
+        }
+        
+        // 添加新督办事项
+        function addTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const content = document.getElementById('taskContent').value.trim();
+            const department = document.getElementById('taskDepartment').value.trim();
+            const deadline = document.getElementById('taskDeadline').value;
+            
+            if(!title || !content || !department || !deadline) {
+                alert('请填写完整信息');
+                return;
+            }
+            
+            const tasks = JSON.parse(localStorage.getItem('superviseData') || '[]');
+            const newTask = {
+                id: Date.now(), // 用时间戳作为唯一ID
+                title: title,
+                content: content,
+                status: "doing", // 新事项默认进行中
+                progress: 0,
+                department: department,
+                deadline: deadline,
+                createTime: new Date().toISOString().split('T')[0]
+            };
+            
+            tasks.unshift(newTask); // 添加到列表开头
+            localStorage.setItem('superviseData', JSON.stringify(tasks));
+            
+            // 更新统计和列表
+            updateStats();
+            loadSuperviseList();
+            
+            // 关闭弹窗
+            closeAddModal();
+            alert('督办事项添加成功！');
+        }
+        
+        // 打开督办详情
+        function openTaskDetail(id) {
+            currentTaskId = id;
+            const tasks = JSON.parse(localStorage.getItem('superviseData') || '[]');
+            const task = tasks.find(t => t.id === id);
+            
+            if(!task) return;
+            
+            document.getElementById('taskDetailTitle').innerText = task.title;
+            
+            const statusText = task.status === 'done' ? '已完成' : 
+                              task.status === 'doing' ? '进行中' : '已超时';
+            
+            let contentHtml = `
+            <div class="detail-item">
+                <span class="detail-label">事项标题：</span>
+                <span>${task.title}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">核心要求：</span>
+                <span>${task.content}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">责任部门：</span>
+                <span>${task.department}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">要求完成时间：</span>
+                <span>${task.deadline}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">当前状态：</span>
+                <span>${statusText}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">当前进度：</span>
+                <span>${task.progress}%</span>
+                <input type="range" class="progress-input" id="progressSlider" min="0" max="100" value="${task.progress}">
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">创建时间：</span>
+                <span>${task.createTime}</span>
+            </div>
+            `;
+            
+            document.getElementById('taskDetailContent').innerHTML = contentHtml;
+            document.getElementById('taskDetailModal').style.display = 'flex';
+        }
+        
+        // 关闭督办详情
+        function closeTaskDetail() {
+            document.getElementById('taskDetailModal').style.display = 'none';
+            currentTaskId = null;
+        }
+        
+        // 更新任务进度
+        function updateTaskProgress() {
+            if(!currentTaskId) return;
+            
+            const newProgress = parseInt(document.getElementById('progressSlider').value);
+            
+            let tasks = JSON.parse(localStorage.getItem('superviseData') || '[]');
+            const taskIndex = tasks.findIndex(t => t.id === currentTaskId);
+            
+            if(taskIndex !== -1) {
+                tasks[taskIndex].progress = newProgress;
+                
+                // 如果进度达到100%，自动标记为已完成
+                if(newProgress === 100) {
+                    tasks[taskIndex].status = 'done';
+                }
+                
+                localStorage.setItem('superviseData', JSON.stringify(tasks));
+                
+                // 更新统计和列表
+                updateStats();
+                loadSuperviseList();
+                
+                // 关闭弹窗
+                closeTaskDetail();
+                alert(`进度更新成功！当前进度：${newProgress}%`);
+            }
+        }
+        
+        // Excel导出
+        function exportToExcel(tableId, fileName) {
+            alert(`已触发导出：${fileName}.xlsx`);
+        }
+    </script>
+</body>
+</html>

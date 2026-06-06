@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大客户订单 - 卢米纳电子</title>
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-second: #f5f5f5;
+            --text-main: #000000;
+            --text-second: #333333;
+            --border-color: #999999;
+            --primary-color: #0078d4;
+            --danger-color: #d93025;
+            --warning-color: #f57c00;
+            --success-color: #0f9d58;
+            --table-border: #dddddd;
+            --tab-bg: #ffffff;
+            --tab-border: #dddddd;
+        }
+        
+        .eye-protect {
+            --bg-main: #f8f9f0;
+            --bg-second: #f0f2e6;
+            --text-main: #222222;
+            --text-second: #444444;
+            --border-color: #888888;
+            --primary-color: #2b78b2;
+            --danger-color: #c43a31;
+            --warning-color: #e07020;
+            --success-color: #2b8a50;
+            --table-border: #cccccc;
+            --tab-bg: #f8f9f0;
+            --tab-border: #cccccc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+        }
+        
+        body {
+            background: #e5e5e5;
+            transition: background 0.3s;
+            padding-bottom: 55px;
+            min-height: 100vh;
+        }
+        
+        .phone-screen {
+            width: 100%;
+            max-width: 430px;
+            min-height: 100vh;
+            margin: 0 auto;
+            background: var(--bg-second);
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        .top-nav {
+            height: 50px;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background 0.3s;
+        }
+        
+        .nav-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .eye-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .eye-switch {
+            width: 40px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        
+        .eye-switch.active .eye-dot {
+            left: 18px;
+        }
+        
+        .eye-dot {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            transition: 0.3s;
+        }
+        
+        .user-info {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .filter-bar {
+            padding: 10px 15px;
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .filter-btn.export {
+            padding: 6px 12px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .search-bar {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .search-input {
+            height: 40px;
+            padding: 0 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+        }
+        
+        .search-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-btn {
+            flex: 1;
+            height: 40px;
+            padding: 0 20px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .add-btn {
+            flex: 1;
+            height: 40px;
+            padding: 0 20px;
+            background: var(--danger-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .order-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 15px;
+        }
+        
+        .order-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .customer-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        
+        .order-status {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .order-status.urgent { background: var(--danger-color); }
+        .order-status.shipped { background: var(--success-color); }
+        .order-status.pending { background: var(--warning-color); }
+        
+        .order-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-second);
+            margin-bottom: 10px;
+        }
+        
+        .order-items {
+            background: var(--bg-second);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .item-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-second);
+            padding: 4px 0;
+            border-bottom: 1px solid var(--table-border);
+        }
+        
+        .order-footer {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .order-btn {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #fff;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .order-btn.danger { background: var(--danger-color); }
+        .order-btn.primary { background: var(--primary-color); }
+        
+        .bottom-tabbar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            height: 55px;
+            background: var(--tab-bg);
+            border-top: 1px solid var(--tab-border);
+            display: flex;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        
+        .tab-item-bottom {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-second);
+            cursor: pointer;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .tab-item-bottom.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        
+        /* 弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: var(--bg-main);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-second);
+        }
+        
+        .modal-body {
+            padding: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            height: 40px;
+            padding: 0 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        .modal-footer {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .modal-btn.cancel {
+            background: var(--bg-second);
+            color: var(--text-main);
+        }
+        
+        .modal-btn.confirm {
+            background: var(--danger-color);
+            color: #fff;
+        }
+        
+        .empty-state {
+            padding: 50px 20px;
+            text-align: center;
+            color: var(--text-second);
+            font-size: 16px;
+        }
+        
+        .detail-item {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-screen">
+        <div class="top-nav">
+            <div class="nav-title">大客户订单</div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">林总 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <button class="filter-btn export" onclick="exportToExcel('orderTable', '大客户订单追踪')">导出Excel</button>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" class="search-input" id="searchInput" placeholder="请输入客户名称/订单编号搜索">
+            <div class="search-btn-group">
+                <button class="search-btn" onclick="searchOrders()">搜索</button>
+                <button class="add-btn" onclick="openAddModal()">紧急加单申请</button>
+            </div>
+        </div>
+
+        <div class="order-list" id="orderList">
+            <!-- 订单数据将从localStorage动态加载 -->
+        </div>
+
+        <table id="orderTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>客户名称</th>
+                    <th>订单编号</th>
+                    <th>签约日期</th>
+                    <th>总金额</th>
+                    <th>应发货日期</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody id="orderTableBody">
+                <!-- 导出数据将动态生成 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 紧急加单弹窗 -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">大客户紧急加单申请</div>
+                <div class="modal-close" onclick="closeAddModal()">×</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">客户名称</label>
+                    <input type="text" class="form-input" id="customerName" placeholder="请输入客户名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">订单总金额（元）</label>
+                    <input type="number" class="form-input" id="orderAmount" placeholder="请输入订单总金额">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">应发货日期</label>
+                    <input type="date" class="form-input" id="shipDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">商品明细</label>
+                    <textarea class="form-textarea" id="orderItems" placeholder="请输入商品明细，每行一个商品，格式：商品名称 数量"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">备注说明</label>
+                    <textarea class="form-textarea" id="orderRemark" placeholder="请输入备注说明"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeAddModal()">取消</button>
+                <button class="modal-btn confirm" onclick="addOrder()">确认提交</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 订单详情弹窗 -->
+    <div class="modal-overlay" id="orderDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="orderDetailTitle">订单详情</div>
+                <div class="modal-close" onclick="closeOrderDetail()">×</div>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <!-- 详情内容将动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeOrderDetail()">关闭</button>
+                <button class="modal-btn confirm" onclick="updateOrderStatus()">标记为已发货</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-tabbar">
+        <a href="index-mobile.html" class="tab-item-bottom">
+            <div class="tab-icon">📊</div>
+            <div>运营看板</div>
+        </a>
+        <a href="warning-mobile.html" class="tab-item-bottom">
+            <div class="tab-icon">⚠️</div>
+            <div>异常预警</div>
+        </a>
+        <a href="supervise-mobile.html" class="tab-item-bottom">
+            <div class="tab-icon">📋</div>
+            <div>决策督办</div>
+        </a>
+        <a href="order-mobile.html" class="tab-item-bottom active">
+            <div class="tab-icon">📦</div>
+            <div>大客户订单</div>
+        </a>
+    </div>
+
+    <script>
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        
+        // 当前选中的订单ID
+        let currentOrderId = null;
+        
+        function toggleEyeProtect() {
+            const html = document.documentElement;
+            const switchEl = document.getElementById('eyeSwitch');
+            let isEyeProtect = localStorage.getItem('eyeProtect') === 'true';
+            isEyeProtect = !isEyeProtect;
+            localStorage.setItem('eyeProtect', isEyeProtect);
+            switchEl.classList.toggle('active', isEyeProtect);
+            html.classList.toggle('eye-protect', isEyeProtect);
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const isEyeProtect = localStorage.getItem('eyeProtect') === 'true';
+            const html = document.documentElement;
+            const switchEl = document.getElementById('eyeSwitch');
+            if(isEyeProtect) {
+                html.classList.add('eye-protect');
+                switchEl.classList.add('active');
+            }
+            
+            // 初始化默认订单数据
+            if(!localStorage.getItem('orderData')) {
+                const defaultOrders = [
+                    {
+                        id: 1,
+                        customer: "华为技术有限公司",
+                        orderNo: "B2B20260401001",
+                        signDate: "2026-04-01",
+                        amount: 150000,
+                        shipDate: "2026-05-04",
+                        status: "urgent",
+                        items: [
+                            {name: "智能门锁 MS-200", qty: 50},
+                            {name: "监控摄像头 CAM-300", qty: 100},
+                            {name: "智能音箱 SPK-100", qty: 200}
+                        ],
+                        createTime: "2026-04-01"
+                    },
+                    {
+                        id: 2,
+                        customer: "小米科技有限公司",
+                        orderNo: "B2B20260420003",
+                        signDate: "2026-04-20",
+                        amount: 85000,
+                        shipDate: "2026-04-25",
+                        status: "shipped",
+                        items: [
+                            {name: "智能音箱 SPK-100", qty: 300}
+                        ],
+                        createTime: "2026-04-20"
+                    },
+                    {
+                        id: 3,
+                        customer: "字节跳动有限公司",
+                        orderNo: "B2B20260501005",
+                        signDate: "2026-05-01",
+                        amount: 120000,
+                        shipDate: "2026-06-01",
+                        status: "pending",
+                        items: [
+                            {name: "监控摄像头 CAM-300", qty: 500}
+                        ],
+                        createTime: "2026-05-01"
+                    }
+                ];
+                localStorage.setItem('orderData', JSON.stringify(defaultOrders));
+            }
+            
+            // 加载订单列表
+            loadOrderList();
+            
+            // 回车搜索
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if(e.key === 'Enter') {
+                    searchOrders();
+                }
+            });
+        });
+        
+        // 加载订单列表
+        function loadOrderList(searchKeyword = '') {
+            const allOrders = JSON.parse(localStorage.getItem('orderData') || '[]');
+            const orderList = document.getElementById('orderList');
+            
+            // 根据关键词过滤
+            let filteredOrders = allOrders;
+            if(searchKeyword) {
+                filteredOrders = allOrders.filter(order => 
+                    order.customer.includes(searchKeyword) || 
+                    order.orderNo.includes(searchKeyword)
+                );
+            }
+            
+            if(filteredOrders.length === 0) {
+                orderList.innerHTML = '<div class="empty-state">暂无相关订单</div>';
+                return;
+            }
+            
+            let html = '';
+            filteredOrders.forEach(order => {
+                const statusClass = order.status === 'urgent' ? 'urgent' : 
+                                  order.status === 'shipped' ? 'shipped' : 'pending';
+                const statusText = order.status === 'urgent' ? '紧急待发货' : 
+                                  order.status === 'shipped' ? '已发货' : '待发货';
+                
+                // 生成商品明细HTML
+                let itemsHtml = '';
+                order.items.forEach(item => {
+                    itemsHtml += `
+                    <div class="item-row">
+                        <span>${item.name}</span>
+                        <span>${item.qty}台</span>
+                    </div>
+                    `;
+                });
+                
+                // 计算超时天数
+                let extraInfo = '';
+                if(order.status === 'urgent') {
+                    const shipDate = new Date(order.shipDate);
+                    const today = new Date();
+                    const diffDays = Math.ceil((today - shipDate) / (1000 * 60 * 60 * 24));
+                    extraInfo = `<div><b>已超时：</b>${diffDays}天</div>`;
+                } else if(order.status === 'pending') {
+                    const shipDate = new Date(order.shipDate);
+                    const today = new Date();
+                    const diffDays = Math.ceil((shipDate - today) / (1000 * 60 * 60 * 24));
+                    extraInfo = `<div><b>剩余时间：</b>${diffDays}天</div>`;
+                } else {
+                    extraInfo = `<div><b>物流状态：</b>已签收</div>`;
+                }
+                
+                html += `
+                <div class="order-card">
+                    <div class="order-header">
+                        <span class="customer-name">${order.customer}</span>
+                        <span class="order-status ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="order-info">
+                        <div><b>订单编号：</b>${order.orderNo}</div>
+                        <div><b>签约日期：</b>${order.signDate}</div>
+                        <div><b>总金额：</b>${order.amount.toLocaleString()}元</div>
+                        <div><b>应发货日期：</b>${order.shipDate}</div>
+                        ${extraInfo}
+                    </div>
+                    <div class="order-items">
+                        <div class="item-title">商品明细</div>
+                        ${itemsHtml}
+                    </div>
+                    <div class="order-footer">
+                        ${order.status === 'urgent' ? '<button class="order-btn danger" onclick="openOrderDetail(' + order.id + ')">强制调货督办</button>' : ''}
+                        <button class="order-btn primary" onclick="openOrderDetail(${order.id})">查看详情</button>
+                    </div>
+                </div>
+                `;
+            });
+            
+            orderList.innerHTML = html;
+            
+            // 更新导出表格数据
+            updateExportTable(filteredOrders);
+        }
+        
+        // 更新导出表格数据
+        function updateExportTable(orders) {
+            const tableBody = document.getElementById('orderTableBody');
+            let html = '';
+            orders.forEach(order => {
+                const statusText = order.status === 'urgent' ? '紧急待发货' : 
+                                  order.status === 'shipped' ? '已发货' : '待发货';
+                html += `
+                <tr>
+                    <td>${order.customer}</td>
+                    <td>${order.orderNo}</td>
+                    <td>${order.signDate}</td>
+                    <td>${order.amount.toLocaleString()}元</td>
+                    <td>${order.shipDate}</td>
+                    <td>${statusText}</td>
+                </tr>
+                `;
+            });
+            tableBody.innerHTML = html;
+        }
+        
+        // 搜索订单
+        function searchOrders() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            loadOrderList(keyword);
+        }
+        
+        // 打开新增弹窗
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'flex';
+            // 设置默认日期为今天
+            document.getElementById('shipDate').value = new Date().toISOString().split('T')[0];
+        }
+        
+        // 关闭新增弹窗
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+            // 清空表单
+            document.getElementById('customerName').value = '';
+            document.getElementById('orderAmount').value = '';
+            document.getElementById('orderItems').value = '';
+            document.getElementById('orderRemark').value = '';
+        }
+        
+        // 添加新订单
+        function addOrder() {
+            const customer = document.getElementById('customerName').value.trim();
+            const amount = parseFloat(document.getElementById('orderAmount').value);
+            const shipDate = document.getElementById('shipDate').value;
+            const itemsText = document.getElementById('orderItems').value.trim();
+            
+            if(!customer || !amount || !shipDate || !itemsText) {
+                alert('请填写完整信息');
+                return;
+            }
+            
+            // 解析商品明细
+            const items = [];
+            const lines = itemsText.split('\n');
+            lines.forEach(line => {
+                if(line.trim()) {
+                    const parts = line.trim().split(/\s+/);
+                    const qty = parseInt(parts.pop()) || 1;
+                    const name = parts.join(' ');
+                    items.push({name, qty});
+                }
+            });
+            
+            const orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+            // 生成订单编号：B2B + 年月日 + 3位序号
+            const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+            const orderNo = `B2B${dateStr}${String(orders.length + 1).padStart(3,'0')}`;
+            
+            const newOrder = {
+                id: Date.now(),
+                customer: customer,
+                orderNo: orderNo,
+                signDate: new Date().toISOString().split('T')[0],
+                amount: amount,
+                shipDate: shipDate,
+                status: "pending", // 新订单默认待发货
+                items: items,
+                remark: document.getElementById('orderRemark').value.trim(),
+                createTime: new Date().toISOString().split('T')[0]
+            };
+            
+            orders.unshift(newOrder); // 添加到列表开头
+            localStorage.setItem('orderData', JSON.stringify(orders));
+            
+            // 重新加载列表
+            loadOrderList();
+            
+            // 关闭弹窗
+            closeAddModal();
+            alert(`订单添加成功！订单编号：${orderNo}`);
+        }
+        
+        // 打开订单详情
+        function openOrderDetail(id) {
+            currentOrderId = id;
+            const orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+            const order = orders.find(o => o.id === id);
+            
+            if(!order) return;
+            
+            document.getElementById('orderDetailTitle').innerText = `订单详情 - ${order.orderNo}`;
+            
+            const statusText = order.status === 'urgent' ? '紧急待发货' : 
+                              order.status === 'shipped' ? '已发货' : '待发货';
+            
+            // 生成商品明细HTML
+            let itemsHtml = '';
+            order.items.forEach(item => {
+                itemsHtml += `
+                <div class="detail-item">
+                    <span>${item.name}：${item.qty}台</span>
+                </div>
+                `;
+            });
+            
+            // 计算超时天数
+            let extraInfo = '';
+            if(order.status === 'urgent') {
+                const shipDate = new Date(order.shipDate);
+                const today = new Date();
+                const diffDays = Math.ceil((today - shipDate) / (1000 * 60 * 60 * 24));
+                extraInfo = `<div class="detail-item"><span class="detail-label">已超时：</span><span>${diffDays}天</span></div>`;
+            } else if(order.status === 'pending') {
+                const shipDate = new Date(order.shipDate);
+                const today = new Date();
+                const diffDays = Math.ceil((shipDate - today) / (1000 * 60 * 60 * 24));
+                extraInfo = `<div class="detail-item"><span class="detail-label">剩余时间：</span><span>${diffDays}天</span></div>`;
+            } else {
+                extraInfo = `<div class="detail-item"><span class="detail-label">物流状态：</span><span>已签收</span></div>`;
+            }
+            
+            let contentHtml = `
+            <div class="detail-item">
+                <span class="detail-label">客户名称：</span>
+                <span>${order.customer}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">订单编号：</span>
+                <span>${order.orderNo}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">签约日期：</span>
+                <span>${order.signDate}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">总金额：</span>
+                <span>${order.amount.toLocaleString()}元</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">应发货日期：</span>
+                <span>${order.shipDate}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">当前状态：</span>
+                <span>${statusText}</span>
+            </div>
+            ${extraInfo}
+            <div class="detail-item">
+                <span class="detail-label">商品明细：</span>
+            </div>
+            ${itemsHtml}
+            `;
+            
+            if(order.remark) {
+                contentHtml += `
+                <div class="detail-item">
+                    <span class="detail-label">备注说明：</span>
+                    <span>${order.remark}</span>
+                </div>
+                `;
+            }
+            
+            document.getElementById('orderDetailContent').innerHTML = contentHtml;
+            document.getElementById('orderDetailModal').style.display = 'flex';
+        }
+        
+        // 关闭订单详情
+        function closeOrderDetail() {
+            document.getElementById('orderDetailModal').style.display = 'none';
+            currentOrderId = null;
+        }
+        
+        // 更新订单状态为已发货
+        function updateOrderStatus() {
+            if(!currentOrderId) return;
+            
+            let orders = JSON.parse(localStorage.getItem('orderData') || '[]');
+            const orderIndex = orders.findIndex(o => o.id === currentOrderId);
+            
+            if(orderIndex !== -1) {
+                orders[orderIndex].status = 'shipped';
+                localStorage.setItem('orderData', JSON.stringify(orders));
+                
+                // 重新加载列表
+                loadOrderList();
+                
+                // 关闭弹窗
+                closeOrderDetail();
+                alert('订单已标记为已发货！');
+            }
+        }
+        
+        // Excel导出
+        function exportToExcel(tableId, fileName) {
+            alert(`已触发导出：${fileName}.xlsx`);
+        }
+    </script>
+</body>
+</html>
