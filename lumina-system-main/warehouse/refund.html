@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退货录入 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .form-container {
+            width: 600px;
+            margin: 15px auto 30px;
+            background: var(--bg-main);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+        }
+        .form-title {
+            font-size: 22px; font-weight: bold; color: var(--text-main);
+            margin-bottom: 20px; text-align: center;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 16px; color: var(--text-main); margin-bottom: 8px; font-weight: 500; }
+        .form-input { width: 100%; height: 45px; padding: 0 15px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 16px; background: var(--bg-main); color: var(--text-main); }
+        .form-textarea { width: 100%; height: 80px; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 16px; background: var(--bg-main); color: var(--text-main); resize: none; }
+        .input-group { display: flex; gap: 10px; }
+        .input-group .form-input { flex: 1; }
+        .input-btn { height: 45px; padding: 0 20px; background: var(--primary-color); color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        .input-btn.voice { background: var(--success-color); }
+        .back-btn { margin: 20px 30px; }
+
+        /* ---- QC buttons ---- */
+        .qc-group { display: flex; gap: 15px; }
+        .qc-btn { flex: 1; height: 70px; border: 3px solid var(--border-color); border-radius: 8px; background: var(--bg-main); font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+        .qc-btn:hover { border-color: #999; }
+        .qc-btn.selected-good { border-color: var(--success-color); background: #e8f5e9; color: var(--success-color); }
+        .qc-btn.selected-bad  { border-color: var(--danger-color); background: #ffebee; color: var(--danger-color); }
+
+        /* ---- Status flow ---- */
+        .status-flow { display: none; margin: 0 30px 15px; padding: 18px 30px; background: var(--bg-main); border: 2px solid var(--border-color); border-radius: 8px; }
+        .status-flow.show { display: block; }
+        .flow-steps { display: flex; align-items: center; justify-content: center; gap: 0; }
+        .flow-step { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+        .flow-dot { width: 36px; height: 36px; border-radius: 50%; background: #e0e0e0; color: #999; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; transition: all 0.3s; }
+        .flow-step.done .flow-dot { background: var(--success-color); color: #fff; }
+        .flow-step.active .flow-dot { background: var(--primary-color); color: #fff; box-shadow: 0 0 0 4px rgba(0,120,212,0.2); }
+        .flow-label { font-size: 13px; color: #999; font-weight: 500; }
+        .flow-step.done .flow-label { color: var(--success-color); font-weight: bold; }
+        .flow-step.active .flow-label { color: var(--primary-color); font-weight: bold; }
+        .flow-line { width: 80px; height: 3px; background: #e0e0e0; margin: 0 -4px; margin-bottom: 18px; transition: background 0.3s; }
+        .flow-line.done { background: var(--success-color); }
+        .flow-title { text-align: center; font-size: 16px; font-weight: bold; color: var(--text-main); margin-bottom: 16px; }
+
+        .submit-btn { width: 100%; height: 50px; background: var(--success-color); color: #fff; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .submit-btn:disabled { opacity: 0.5; cursor: default; }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼模式</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">登录人：王主管 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-btn">← 返回首页</a>
+
+        <!-- Status Flow (hidden until submit) -->
+        <div class="status-flow" id="statusFlow">
+            <div class="flow-title" id="flowTitle"></div>
+            <div class="flow-steps">
+                <div class="flow-step" id="step1"><div class="flow-dot">1</div><div class="flow-label">待检</div></div>
+                <div class="flow-line" id="line1"></div>
+                <div class="flow-step" id="step2"><div class="flow-dot">2</div><div class="flow-label">质检完成</div></div>
+                <div class="flow-line" id="line2"></div>
+                <div class="flow-step" id="step3"><div class="flow-dot">3</div><div class="flow-label">已入库</div></div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="form-title">退货录入</div>
+
+            <div class="form-group">
+                <label class="form-label">* SN码（对账必填）</label>
+                <div class="input-group">
+                    <input type="text" class="form-input" id="snCode" placeholder="请扫码/手动输入SN码">
+                    <button class="input-btn" onclick="scanCode()">扫码录入</button>
+                    <button class="input-btn voice" onclick="voiceInput()">语音输入</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">* 原订单号</label>
+                <div class="input-group">
+                    <input type="text" class="form-input" id="orderId" placeholder="请输入或扫码原订单号">
+                    <button class="input-btn" onclick="scanOrderId()">扫码录入</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">* 退货原因</label>
+                <select class="form-input" id="refundReason">
+                    <option value="">请选择退货原因</option>
+                    <option value="质量问题">质量问题</option>
+                    <option value="7天无理由">7天无理由退货</option>
+                    <option value="发错货">发错货</option>
+                    <option value="其他">其他原因</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">* 质检标记</label>
+                <div class="qc-group">
+                    <button class="qc-btn" id="qcGood" onclick="selectQuality('good')">✅ 可再次销售</button>
+                    <button class="qc-btn" id="qcBad"  onclick="selectQuality('bad')">❌ 不良品</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">手写备注/补充说明（选填）</label>
+                <textarea class="form-textarea" id="remark" placeholder="请输入补充说明"></textarea>
+            </div>
+
+            <button class="submit-btn" id="submitBtn" onclick="submitRefund()">提交退货录入</button>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/scanner-voice.js"></script>
+    <script src="../js/toast.js"></script>
+    <script>
+        var today = new Date();
+        document.getElementById('currentDate').innerText = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+        var selectedQuality = null;
+
+        // ---- SN → SKU mapping ----
+        var SN_SKU_MAP = {
+            'SN20260510001': { sku: 'SPK-A100', name: '智能音箱 Pro' },
+            'SN20260510002': { sku: 'SPK-B200', name: '监控摄像头 4K' }
+        };
+
+        function scanCode() {
+            openScanner(function(value) {
+                document.getElementById('snCode').value = value;
+            });
+        }
+        function voiceInput() {
+            openVoiceInput(function(value) {
+                document.getElementById('snCode').value = value;
+            });
+        }
+        function scanOrderId() {
+            openScanner(function(value) {
+                document.getElementById('orderId').value = value;
+            });
+        }
+
+        function selectQuality(q) {
+            selectedQuality = q;
+            var g = document.getElementById('qcGood');
+            var b = document.getElementById('qcBad');
+            g.className = 'qc-btn' + (q === 'good' ? ' selected-good' : '');
+            b.className = 'qc-btn' + (q === 'bad'  ? ' selected-bad'  : '');
+        }
+
+        function updateStockData(sn) {
+            var mapping = SN_SKU_MAP[sn];
+            if (!mapping) {
+                // fallback: try to match any SKU
+                var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+                if (stockData.length > 0) {
+                    mapping = { sku: stockData[0].sku, name: '未知商品' };
+                } else {
+                    return null;
+                }
+            }
+
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            var found = false;
+            for (var i = 0; i < stockData.length; i++) {
+                if (stockData[i].sku === mapping.sku) {
+                    stockData[i].warehouse_qty += 1;
+                    stockData[i].difference = stockData[i].website_qty - stockData[i].warehouse_qty;
+                    found = true;
+                    break;
+                }
+            }
+            localStorage.setItem('stockData', JSON.stringify(stockData));
+            return { found: found, sku: mapping.sku, name: mapping.name };
+        }
+
+        function showStatusFlow(sn, qualityLabel) {
+            var flow = document.getElementById('statusFlow');
+            flow.classList.add('show');
+            document.getElementById('flowTitle').innerText = '退货单 ' + sn + ' — ' + qualityLabel;
+
+            // Step 1: done
+            document.getElementById('step1').className = 'flow-step done';
+            document.getElementById('line1').className = 'flow-line done';
+            // Step 2: done
+            document.getElementById('step2').className = 'flow-step done';
+            document.getElementById('line2').className = 'flow-line done';
+            // Step 3: active (入库完成)
+            document.getElementById('step3').className = 'flow-step active';
+            document.getElementById('step3').querySelector('.flow-dot').innerText = '✓';
+        }
+
+        function submitRefund() {
+            var sn = document.getElementById('snCode').value;
+            var orderId = document.getElementById('orderId').value;
+            var reason = document.getElementById('refundReason').value;
+            var remark = document.getElementById('remark').value;
+
+            if (!sn || !orderId || !reason) {
+                showToast('请填写所有必填项！', 'warning');
+                return;
+            }
+            if (!selectedQuality) {
+                showToast('请选择质检标记！', 'warning');
+                return;
+            }
+
+            var qualityLabel = selectedQuality === 'good' ? '可再次销售' : '不良品';
+            var isGood = selectedQuality === 'good';
+
+            // 1. 保存退货记录
+            var refunds = JSON.parse(localStorage.getItem('refundData') || '[]');
+            var newRefund = {
+                id: 'RT' + Date.now(),
+                orderId: orderId,
+                sn: sn,
+                customer: '客户' + Math.floor(Math.random()*1000),
+                phone: '138XXXX' + Math.floor(Math.random()*10000),
+                account: '-',
+                bank: '-',
+                amount: 0,
+                product: 'SPK100 智能音箱',
+                quality: qualityLabel,
+                operator: '王主管',
+                status: '已入库',
+                createTime: new Date().toLocaleString()
+            };
+            refunds.unshift(newRefund);
+            localStorage.setItem('refundData', JSON.stringify(refunds));
+
+            // 2. 良品恢复库存
+            var stockResult = null;
+            if (isGood) {
+                stockResult = updateStockData(sn);
+            }
+
+            // 3. 审计日志
+            var stockMsg = '';
+            if (stockResult && stockResult.found) {
+                stockMsg = '，已恢复库存：' + stockResult.sku + ' ' + stockResult.name + ' +1';
+            } else if (isGood) {
+                stockMsg = '，库存恢复失败（未匹配SKU）';
+            } else {
+                stockMsg = '，不良品不入库';
+            }
+            addAuditLog('退货录入', '录入退货 ' + newRefund.id + ' [' + qualityLabel + ']', '-', 'SN码：' + sn + stockMsg);
+
+            // 4. 展示状态流
+            showStatusFlow(sn, qualityLabel);
+
+            // 5. 提示
+            var resultMsg = '退货录入成功！质检结果：' + qualityLabel;
+            if (stockResult && stockResult.found) {
+                resultMsg += '\n良品已恢复库存：' + stockResult.sku + ' ' + stockResult.name + ' (+1)';
+            }
+            showToast(resultMsg, 'success');
+
+            // 6. 清空表单
+            document.getElementById('snCode').value = '';
+            document.getElementById('orderId').value = '';
+            document.getElementById('refundReason').value = '';
+            document.getElementById('remark').value = '';
+            selectedQuality = null;
+            document.getElementById('qcGood').className = 'qc-btn';
+            document.getElementById('qcBad').className = 'qc-btn';
+        }
+    </script>
+</body>
+</html>

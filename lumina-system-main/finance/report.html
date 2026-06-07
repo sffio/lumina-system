@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表导出 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 30px;
+        }
+        .report-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .report-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        .report-desc {
+            font-size: 14px;
+            color: var(--text-second);
+            line-height: 1.5;
+        }
+        .export-btn {
+            height: 45px;
+            background: var(--success-color);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='index.html'">工作台</div>
+                <div class="nav-item" onclick="window.location.href='receivable.html'">应收账款管理</div>
+                <div class="nav-item" onclick="window.location.href='refund-audit.html'">退款审核</div>
+                <div class="nav-item" onclick="window.location.href='audit-log.html'">审计日志</div>
+                <div class="nav-item active">报表导出</div>
+            </div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼模式</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">登录人：陈总监 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="report-grid">
+            <div class="report-card">
+                <div class="report-title">合并销售报表</div>
+                <div class="report-desc">
+                    整合线上电商、线下零售、B2B业务全渠道销售数据，支持按日期、客户、产品维度筛选导出，兼容原有Excel格式
+                </div>
+                <button class="export-btn" onclick="alert('合并销售报表Excel已导出')">导出报表</button>
+            </div>
+            <div class="report-card">
+                <div class="report-title">应收账款台账</div>
+                <div class="report-desc">
+                    包含所有B2B订单的应收金额、已收金额、账期、提醒时间、核销状态等信息，支持按账期状态筛选导出
+                </div>
+                <button class="export-btn" onclick="alert('应收账款台账Excel已导出')">导出报表</button>
+            </div>
+            <div class="report-card">
+                <div class="report-title">退款审核清单</div>
+                <div class="report-desc">
+                    包含所有退款申请的详细信息、责任归属、审核状态、打款记录等，支持按日期、状态筛选导出
+                </div>
+                <button class="export-btn" onclick="alert('退款审核清单Excel已导出')">导出报表</button>
+            </div>
+            <div class="report-card">
+                <div class="report-title">库存盘点报表</div>
+                <div class="report-desc">
+                    包含月度盘点的系统库存、实盘数量、差异数据、调整记录等信息，支持导出盘点差异表
+                </div>
+                <button class="export-btn" onclick="alert('库存盘点报表Excel已导出')">导出报表</button>
+            </div>
+            <div class="report-card">
+                <div class="report-title">审计日志报表</div>
+                <div class="report-desc">
+                    包含全流程操作日志，支持按操作人、业务类型、时间范围筛选导出，满足审计备查要求
+                </div>
+                <button class="export-btn" onclick="alert('审计日志报表Excel已导出')">导出报表</button>
+            </div>
+            <div class="report-card">
+                <div class="report-title">库存差异分析报表</div>
+                <div class="report-desc">
+                    统计分析库存差异率、超卖次数、同步错误类型等数据，生成可视化分析报表
+                </div>
+                <button class="export-btn" onclick="alert('库存差异分析报表Excel已导出')">导出报表</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script>
+        // 自动填充当前日期
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    </script>
+</body>
+</html>

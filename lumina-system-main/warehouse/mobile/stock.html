@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>库存总览 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../../css/common.css">
+    <link rel="stylesheet" href="css/mobile-common.css">
+    <style>
+        /* Excel-style rows for scrollable tables */
+        .scrollable-table-wrap tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .scrollable-table-wrap tbody tr:nth-child(odd) {
+            background: #ffffff;
+        }
+        .scrollable-table-wrap tbody tr:hover {
+            background: #e8f0fe;
+        }
+        .scrollable-table-wrap .num-cell {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-family: "Consolas", "Courier New", monospace;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .scrollable-table-wrap .time-cell {
+            white-space: nowrap;
+            font-size: 12px;
+            color: var(--text-second);
+        }
+        /* Diff color scale — 3 levels */
+        .diff-zero  { color: var(--success-color); font-weight: bold; }
+        .diff-small { color: var(--warning-color); font-weight: bold; }
+        .diff-large { color: var(--danger-color); font-weight: bold; }
+        /* Health bar */
+        .health-bar-wrap-mobile {
+            display: flex; align-items: center; gap: 6px;
+            grid-column: 1 / -1;
+            padding-top: 4px;
+            border-top: 1px solid var(--border-light);
+        }
+        .health-bar-mobile {
+            flex: 1; height: 6px; border-radius: 3px;
+            background: #e0e0e0; overflow: hidden;
+        }
+        .health-bar-fill-mobile {
+            height: 100%; border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+        /* Stock status badge */
+        .stock-status-sm {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .stock-status-sm.oversold {
+            background: var(--status-danger-bg);
+            color: var(--status-danger-text);
+        }
+        .stock-status-sm.low {
+            background: var(--status-warning-bg);
+            color: var(--status-warning-text);
+        }
+        .stock-status-sm.normal {
+            background: var(--status-success-bg);
+            color: var(--status-success-text);
+        }
+        .stock-status-sm.pending {
+            background: var(--status-warning-bg);
+            color: var(--status-warning-text);
+        }
+        /* Summary bar for mobile */
+        .stock-summary-mobile {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--bg-main);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            font-size: 12px;
+            color: var(--text-second);
+            margin-bottom: 8px;
+        }
+        .stock-summary-mobile strong {
+            color: var(--text-main);
+            font-size: 14px;
+        }
+        /* Section spacing */
+        .mobile-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 10px;
+            padding-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <!-- Mobile Top Bar -->
+        <div class="mobile-top-bar">
+            <div class="top-left">
+                <a href="index.html" class="back-link-mobile" title="返回工作台" data-icon="chevron-left" data-icon-size="24"></a>
+                <span class="top-title">库存总览</span>
+            </div>
+            <div class="top-right">
+                <button class="eye-mobile-btn" id="eyeMobileBtn" onclick="toggleEyeMobile()" title="护眼模式"></button>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <!-- 汇总栏 -->
+            <div class="stock-summary-mobile" id="stockSummary"></div>
+
+            <!-- 上半部分：库存变动记录 -->
+            <div class="mobile-section-title">📋 库存变动记录（从新到老）</div>
+            <div class="scrollable-table-wrap">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>操作人</th>
+                            <th>类型</th>
+                            <th>变动内容</th>
+                            <th>变动前</th>
+                            <th>变动后</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="6" style="text-align:center;padding:24px;color:#999;">暂无库存变动记录</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 导出按钮 -->
+            <div style="text-align:right;margin-bottom:12px;">
+                <button class="export-btn-sm" onclick="exportToExcel('historyTable', '库存变动记录')">导出变动记录</button>
+            </div>
+
+            <div style="text-align:right;margin-bottom:8px;">
+            </div>
+            <!-- 下半部分：当前全部商品库存 -->
+            <div class="mobile-section-title">📦 当前全部商品库存</div>
+            <div class="scrollable-table-wrap">
+                <table id="currentStockTable">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>品名</th>
+                            <th>仓库库存</th>
+                            <th>线上库存</th>
+                            <th>差异</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStockBody">
+                        <tr><td colspan="6" style="text-align:center;padding:24px;color:#999;">暂无库存数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 导出按钮 -->
+            <div style="text-align:right;margin-bottom:8px;">
+                <button class="export-btn-sm" onclick="exportToExcel('currentStockTable', '当前商品库存')">导出库存表</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/common.js"></script>
+    <script src="../../js/api.js?v=2"></script>
+    <script src="js/mobile-icons.js"></script>
+    <script src="js/mobile-nav.js"></script>
+    <script>
+        // 初始化护眼按钮
+        (function() {
+            var isEye = localStorage.getItem('eyeProtect') === 'true';
+            var btn = document.getElementById('eyeMobileBtn');
+            if (btn && window.renderMobileIcon) {
+                btn.innerHTML = window.renderMobileIcon(isEye ? 'sun' : 'moon', '20');
+            }
+        })();
+
+        // ---- SKU → 产品名映射 ----
+        var PRODUCT_NAMES = {
+            'SPK-A100': '智能音箱 Pro',
+            'SPK-B200': '监控摄像头 4K',
+            'SPK-C300': '智能门锁 E1',
+            'SPK-D400': '无线耳机 T3',
+            'SPK-E500': '智能手表 S2'
+        };
+
+        // ---- 状态判断（difference = website_qty - warehouse_qty）----
+        function getStockStatus(difference, warehouseQty) {
+            if (difference === 0) return { text: '正常',   cls: 'normal' };
+            if (difference > 0)  return { text: '超卖',   cls: 'oversold' };
+            return { text: '待同步', cls: 'pending' };
+        }
+
+        // ====== 渲染库存变动历史 ======
+        function renderHistory() {
+            var allLogs = JSON.parse(localStorage.getItem('auditLogData') || '[]');
+            var inventoryTypes = ['库存变动', '库存调整'];
+            var logs = allLogs.filter(function(l) {
+                return inventoryTypes.indexOf(l.type) !== -1;
+            });
+            logs.sort(function(a, b) {
+                return (b.time || '').localeCompare(a.time || '');
+            });
+
+            var tbody = document.getElementById('historyBody');
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#999;">暂无库存变动记录</td></tr>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i];
+                html += '<tr>' +
+                    '<td class="time-cell">' + (log.time || '-') + '</td>' +
+                    '<td>' + (log.operator || '-') + '</td>' +
+                    '<td><span style="color:var(--primary-color);font-weight:500;">' + (log.type || '-') + '</span></td>' +
+                    '<td>' + (log.content || '-') + '</td>' +
+                    '<td class="num-cell" style="color:var(--text-second);">' + (log.before || '-') + '</td>' +
+                    '<td class="num-cell" style="color:var(--primary-color);">' + (log.after || '-') + '</td>' +
+                    '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+
+        // ====== 渲染当前库存 ======
+        function renderCurrentStock() {
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            var tbody = document.getElementById('currentStockBody');
+
+            if (stockData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#999;">暂无库存数据</td></tr>';
+                document.getElementById('stockSummary').innerHTML = '';
+                return;
+            }
+
+            var totalWarehouse = 0, totalWebsite = 0, totalAbsDiff = 0;
+            var oversoldCount = 0, pendingCount = 0, normalCount = 0;
+
+            var html = '';
+            for (var i = 0; i < stockData.length; i++) {
+                var item = stockData[i];
+                var name = PRODUCT_NAMES[item.sku] || item.sku;
+                var diff = item.difference || 0;
+                var absDiff = Math.abs(diff);
+                var wQty = item.warehouse_qty || 0;
+                var status = getStockStatus(diff, wQty);
+
+                totalWarehouse += wQty;
+                totalWebsite += (item.website_qty || 0);
+                totalAbsDiff += absDiff;
+                if (status.cls === 'oversold') oversoldCount++;
+                else if (status.cls === 'pending') pendingCount++;
+                else normalCount++;
+
+                // 差异色阶（diff = website - warehouse）
+                var diffCls;
+                if (diff === 0) diffCls = 'diff-zero';
+                else if (diff > 0) diffCls = 'diff-large';
+                else diffCls = 'diff-small';
+                var diffPrefix = diff > 0 ? '+' : '';
+
+                html += '<tr>' +
+                    '<td style="font-weight:600;">' + (item.sku || '-') + '</td>' +
+                    '<td>' + name + '</td>' +
+                    '<td class="num-cell">' + wQty + '</td>' +
+                    '<td class="num-cell">' + (item.website_qty || 0) + '</td>' +
+                    '<td class="num-cell ' + diffCls + '">' + diffPrefix + diff + '</td>' +
+                    '<td><span class="stock-status-sm ' + status.cls + '">' + status.text + '</span></td>' +
+                    '</tr>';
+            }
+            tbody.innerHTML = html;
+
+            // 动态差异率
+            var varianceRate = totalWarehouse > 0 ? (totalAbsDiff / totalWarehouse * 100) : 0;
+            var rateColor = varianceRate <= 1 ? 'var(--success-color)' : (varianceRate <= 3 ? 'var(--warning-color)' : 'var(--danger-color)');
+            var rateText = varianceRate.toFixed(1) + '%';
+
+            // 三色分段比例
+            var total = stockData.length;
+            var normalPct  = Math.round(normalCount  / total * 100);
+            var pendingPct = Math.round(pendingCount / total * 100);
+            var oversoldPct = 100 - normalPct - pendingPct;
+
+            // 汇总栏
+            document.getElementById('stockSummary').innerHTML =
+                '<div>商品种类<br><strong>' + total + ' 种</strong></div>' +
+                '<div>仓库总量<br><strong>' + totalWarehouse + '</strong></div>' +
+                '<div>线上总量<br><strong>' + totalWebsite + '</strong></div>' +
+                '<div>正常<br><strong style="color:var(--success-color);">' + normalCount + '</strong></div>' +
+                '<div>待同步<br><strong style="color:var(--warning-color);">' + pendingCount + '</strong></div>' +
+                '<div style="color:var(--status-danger-text);">超卖<br><strong style="color:var(--danger-color);">' + oversoldCount + '</strong></div>' +
+                '<div>差异率<br><strong style="color:' + rateColor + ';">' + rateText + '</strong></div>' +
+                '<div class="health-bar-wrap-mobile" style="grid-column:1/-1;">' +
+                '<span style="font-size:11px;color:var(--text-second);">' +
+                '正常' + normalCount + ' / 待同步' + pendingCount + ' / 超卖' + oversoldCount +
+                '</span>' +
+                '<span class="health-bar-mobile" style="flex:1;display:flex;border-radius:3px;overflow:hidden;height:8px;">' +
+                (normalPct  > 0 ? '<span style="width:' + normalPct  + '%;background:var(--success-color);height:100%;"></span>' : '') +
+                (pendingPct > 0 ? '<span style="width:' + pendingPct + '%;background:var(--warning-color);height:100%;"></span>' : '') +
+                (oversoldPct > 0 ? '<span style="width:' + oversoldPct + '%;background:var(--danger-color);height:100%;"></span>' : '') +
+                '</span></div>';
+        }
+
+        // 直接从 API 拉取数据并渲染
+        var p1 = API.getInventory().then(function(d) { localStorage.setItem('stockData', JSON.stringify(d)); });
+        var p2 = API.getTransactions({limit: 200}).then(function(d) {
+            localStorage.setItem('auditLogData', JSON.stringify(d.map(function(t) { return { time: (t.created_at||'').replace('T',' ').slice(0,19), operator: t.operator, type: t.type, content: (t.remark||'') + ' [' + t.sku + ']', before: t.quantity_before != null ? t.sku + ' 库存：' + t.quantity_before : '-', after: t.quantity_after != null ? t.sku + ' 库存：' + t.quantity_after : '-', ip: '192.168.1.' + (t.id||1) }; })));
+        });
+        Promise.all([p1, p2]).then(function() {
+            console.log('[API] 库存数据加载完成');
+            renderHistory();
+            renderCurrentStock();
+        }).catch(function(e) {
+            console.warn('[API] 加载失败，使用缓存:', e.message);
+            renderHistory();
+            renderCurrentStock();
+        });
+    </script>
+</body>
+</html>

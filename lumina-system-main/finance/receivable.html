@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应收账款管理 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .main-content {
+            display: flex;
+            gap: 20px;
+            padding: 20px 30px;
+            flex: 1;
+            overflow: hidden;
+        }
+        .ledger-section {
+            flex: 1;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .rule-section {
+            width: 320px;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .rule-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .rule-desc {
+            font-size: 12px;
+            color: var(--text-second);
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .rule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            padding: 8px 0;
+            color: var(--text-main);
+        }
+        .save-btn {
+            margin-top: 20px;
+            height: 45px;
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='index.html'">工作台</div>
+                <div class="nav-item active">应收账款管理</div>
+                <div class="nav-item" onclick="window.location.href='refund-audit.html'">退款审核</div>
+                <div class="nav-item" onclick="window.location.href='audit-log.html'">审计日志</div>
+            </div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap">
+                    <span>护眼模式</span>
+                    <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                        <div class="eye-dot"></div>
+                    </div>
+                </div>
+                <div class="user-info">登录人：陈总监 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-item">
+                <span class="filter-label">客户名称：</span>
+                <input type="text" class="filter-input" placeholder="请输入客户名称">
+            </div>
+            <div class="filter-item">
+                <span class="filter-label">账期状态：</span>
+                <select class="filter-select">
+                    <option>全部</option>
+                    <option>正常</option>
+                    <option>预警</option>
+                    <option>逾期</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <span class="filter-label">日期范围：</span>
+                <input type="date" class="filter-input">
+                <span>至</span>
+                <input type="date" class="filter-input">
+            </div>
+            <button class="filter-btn">查询</button>
+            <button class="filter-btn secondary">重置</button>
+            <button class="filter-btn export" onclick="exportToExcel('receivableTable', '应收账款台账')">导出Excel</button>
+        </div>
+
+        <div class="main-content">
+            <div class="ledger-section">
+                <div class="section-header">
+                    <span>应收账款台账</span>
+                    <span style="font-size:14px;font-weight:normal;">共 12 条记录</span>
+                </div>
+                <div class="excel-table">
+                    <table id="receivableTable">
+                        <thead>
+                            <tr>
+                                <th>订单编号</th>
+                                <th>客户名称</th>
+                                <th>应收金额</th>
+                                <th>合同账期</th>
+                                <th>已收金额<br>（网银自动同步）</th>
+                                <th>下次提醒时间<br>（系统自动计算）</th>
+                                <th>核销状态</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: var(--bg-second);">
+                                <td>B2B20260401001</td>
+                                <td>华为技术有限公司</td>
+                                <td>150000元</td>
+                                <td>2026-05-01</td>
+                                <td class="readonly-text">0元</td>
+                                <td class="readonly-text">已逾期</td>
+                                <td class="status-red">未核销</td>
+                                <td class="status-red">逾期15天</td>
+                                <td>
+                                    <button class="audit-btn pass" onclick="openUrgeModal()">催款</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>B2B20260420003</td>
+                                <td>小米科技有限公司</td>
+                                <td>85000元</td>
+                                <td>2026-05-20</td>
+                                <td class="readonly-text">0元</td>
+                                <td class="readonly-text">2026-05-17</td>
+                                <td class="status-yellow">待核销</td>
+                                <td class="status-yellow">账期前3天</td>
+                                <td>
+                                    <button class="audit-btn pass" onclick="openUrgeModal()">催款</button>
+                                    <button class="audit-btn primary">查看</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>B2B20260501005</td>
+                                <td>字节跳动有限公司</td>
+                                <td>120000元</td>
+                                <td>2026-06-01</td>
+                                <td class="readonly-text">0元</td>
+                                <td class="readonly-text">2026-05-25</td>
+                                <td class="status-yellow">待核销</td>
+                                <td class="status-green">正常</td>
+                                <td>
+                                    <button class="audit-btn primary">查看</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>B2B20260310002</td>
+                                <td>OPPO广东移动通信有限公司</td>
+                                <td>200000元</td>
+                                <td>2026-04-10</td>
+                                <td class="readonly-text">200000元</td>
+                                <td class="readonly-text">已完成</td>
+                                <td class="status-green">已核销</td>
+                                <td class="status-green">已结清</td>
+                                <td>
+                                    <button class="audit-btn primary">查看</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="rule-section">
+                <div class="rule-title">多级预警规则设置</div>
+                <div class="rule-desc">
+                    规则说明：系统根据合同账期+勾选规则，<b>自动计算下次提醒时间</b>，无需手动填写，保存后实时更新全台账
+                </div>
+                <div class="rule-item">
+                    <span>账期前7天提醒</span>
+                    <input type="checkbox" checked>
+                </div>
+                <div class="rule-item">
+                    <span>账期前3天提醒</span>
+                    <input type="checkbox" checked>
+                </div>
+                <div class="rule-item">
+                    <span>账期前1天提醒</span>
+                    <input type="checkbox" checked>
+                </div>
+                <div class="rule-item">
+                    <span>逾期1天标红预警</span>
+                    <input type="checkbox" checked>
+                </div>
+                <div class="rule-item">
+                    <span>逾期15天抄送COO</span>
+                    <input type="checkbox" checked>
+                </div>
+                <button class="save-btn" onclick="alert('规则已保存，台账提醒时间已自动重新计算')">保存规则并更新台账</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 催款弹窗 -->
+    <div class="modal-mask" id="urgeModal">
+        <div class="modal" style="width: 700px; height: 550px;">
+            <div class="modal-header">
+                <span class="modal-title">催款日志 - 订单B2B20260401001</span>
+                <button class="close-btn" onclick="closeUrgeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="padding: 12px; background: var(--bg-second); border-radius: 4px; font-size: 14px; margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div><b>客户名称：</b>华为技术有限公司</div>
+                    <div><b>应收金额：</b>150000元</div>
+                    <div><b>客户联系电话：</b>139XXXX5678</div>
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 10px;">历史催款记录（不可篡改，自动同步审计日志）</div>
+                    <div class="excel-table" style="flex: 1; border: 1px solid var(--border-color); border-radius: 4px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>催款日期</th>
+                                    <th>跟进人</th>
+                                    <th>联系电话</th>
+                                    <th>客户回复</th>
+                                    <th>下次跟进时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>2026-05-06 09:30</td>
+                                    <td>陈总监</td>
+                                    <td>139XXXX5678</td>
+                                    <td>本周内安排付款</td>
+                                    <td>2026-05-10</td>
+                                </tr>
+                                <tr>
+                                    <td>2026-05-01 14:20</td>
+                                    <td>陈总监</td>
+                                    <td>139XXXX5678</td>
+                                    <td>正在走付款审批流程</td>
+                                    <td>2026-05-06</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; padding: 15px; background: var(--bg-second); border-radius: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-size: 13px; margin-bottom: 5px; display: block;">催款日期</label>
+                        <input type="datetime-local" class="form-input" value="2026-05-10T09:00">
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; margin-bottom: 5px; display: block;">下次跟进时间</label>
+                        <input type="date" class="form-input">
+                    </div>
+                    <div style="grid-column: 1 / 3;">
+                        <label style="font-size: 13px; margin-bottom: 5px; display: block;">沟通内容</label>
+                        <textarea class="form-textarea" style="height: 60px;" placeholder="请填写本次催款沟通的核心内容"></textarea>
+                    </div>
+                    <div style="grid-column: 1 / 3;">
+                        <label style="font-size: 13px; margin-bottom: 5px; display: block;">客户回复/承诺</label>
+                        <textarea class="form-textarea" style="height: 60px;" placeholder="请填写客户的回复、付款承诺等关键信息"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="closeUrgeModal()">取消</button>
+                <button class="modal-btn confirm" onclick="alert('催款记录已保存，自动同步至审计日志')">保存催款记录</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script>
+        // 自动填充当前日期
+        const today = new Date();
+        document.getElementById('currentDate').innerText = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+        function openUrgeModal() {
+            document.getElementById('urgeModal').style.display = 'flex';
+        }
+
+        function closeUrgeModal() {
+            document.getElementById('urgeModal').style.display = 'none';
+        }
+
+        // 点击遮罩关闭
+        document.getElementById('urgeModal').addEventListener('click', function(e) {
+            if(e.target === this) closeUrgeModal();
+        });
+    </script>
+</body>
+</html>
