@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审计日志 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .pc-screen {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* ========== 导航栏样式（与工作台一致） ========== */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .nav-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-item {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            color: #333;
+        }
+        .nav-item:hover {
+            background: #f5f5f5;
+        }
+        .nav-item.active {
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .eye-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .eye-switch {
+            width: 44px;
+            height: 22px;
+            background: #ccc;
+            border-radius: 22px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+        }
+        .eye-switch.active {
+            background: #1890ff;
+        }
+        .eye-dot {
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.3s;
+        }
+        .eye-switch.active .eye-dot {
+            left: 23px;
+        }
+        .user-info {
+            font-size: 14px;
+            color: #666;
+        }
+        /* ========== 筛选栏样式（与工作台一致） ========== */
+        .filter-bar {
+            padding: 15px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .filter-input, .filter-select {
+            padding: 6px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+        }
+        .filter-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .filter-btn:first-of-type {
+            background: #1890ff;
+            color: #fff;
+        }
+        .filter-btn.secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .filter-btn.export {
+            background: #52c41a;
+            color: #fff;
+        }
+        /* ========== 审计日志主体样式 ========== */
+        .compliance-tip {
+            padding: 10px 24px;
+            background: #e6f7ff;
+            border-bottom: 1px solid #1890ff;
+            font-size: 13px;
+            color: #1890ff;
+            line-height: 1.4;
+        }
+        .compliance-tip strong {
+            color: #333;
+        }
+        .audit-section {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+            margin: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+        }
+        .excel-table {
+            overflow-x: auto;
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px 12px;
+            border: 1px solid #e8e8e8;
+            text-align: left;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+        .diff-text {
+            color: #dc3545;
+            font-family: Consolas, monospace;
+            font-weight: bold;
+        }
+        .type-tag {
+            color: #1890ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="pc-screen">
+    <div class="top-nav">
+        <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+        <div class="nav-menu">
+            <div class="nav-item" onclick="window.location.href='index.html'">工作台</div>
+            <div class="nav-item" onclick="window.location.href='receivable.html'">应收账款管理</div>
+            <div class="nav-item" onclick="window.location.href='refund-audit.html'">退款审核</div>
+            <div class="nav-item active">审计日志</div>
+            <div class="nav-item" onclick="window.location.href='report.html'">报表导出</div>
+        </div>
+        <div class="nav-right">
+            <div class="eye-switch-wrap">
+                <span>护眼模式</span>
+                <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                    <div class="eye-dot"></div>
+                </div>
+            </div>
+            <div class="user-info">登录人：陈总监 | <span id="currentDate"></span></div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-item">
+            <span class="filter-label">操作人：</span>
+            <select class="filter-select" id="operatorFilter">
+                <option value="全部" selected>全部</option>
+                <option value="王主管">王主管</option>
+                <option value="陈总监">陈总监</option>
+                <option value="销售部-张经理">销售部-张经理</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <span class="filter-label">业务类型：</span>
+            <select class="filter-select" id="businessTypeFilter">
+                <option value="全部" selected>全部</option>
+                <option value="库存变动">库存变动</option>
+                <option value="退货录入">退货录入</option>
+                <option value="退款审核">退款审核</option>
+                <option value="订单录入">订单录入</option>
+                <option value="库存调整">库存调整</option>
+                <option value="催办">催办</option>
+                <option value="报表导出">报表导出</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <span class="filter-label">操作时间：</span>
+            <input type="date" class="filter-input" id="startDate">
+            <span>至</span>
+            <input type="date" class="filter-input" id="endDate">
+        </div>
+        <button class="filter-btn" onclick="loadAuditLogs()">查询</button>
+        <button class="filter-btn secondary" onclick="resetFilters()">重置</button>
+        <button class="filter-btn export" onclick="exportAuditLogs()">导出审计报表</button>
+    </div>
+
+    <div class="compliance-tip">
+        <strong>合规提示：</strong>本系统审计日志采用区块链存证技术，<strong>不可篡改、不可删除、不自动清理，最低保存期限≥36个月</strong>，支持近3年及以上历史数据追溯查询与导出，完全满足审计合规要求
+    </div>
+
+    <div class="audit-section">
+        <div class="section-header">
+            <span>全流程审计日志</span>
+            <span id="totalCount">加载中...</span>
+        </div>
+        <div class="excel-table">
+            <table id="auditTable">
+                <thead>
+                    <tr>
+                        <th>操作时间</th>
+                        <th>操作人</th>
+                        <th>业务类型</th>
+                        <th>操作内容</th>
+                        <th>修改前数据</th>
+                        <th>修改后数据</th>
+                        <th>操作IP</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr><td colspan="7" style="text-align:center;">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="../js/common.js"></script>
+<script src="../js/toast.js"></script>
+<script>
+    var todayDate = new Date();
+    document.getElementById('currentDate').innerText = todayDate.getFullYear() + '-' + String(todayDate.getMonth()+1).padStart(2,'0') + '-' + String(todayDate.getDate()).padStart(2,'0');
+    
+    // 设置默认日期范围（近3年）
+    document.getElementById('endDate').value = todayDate.toISOString().split('T')[0];
+    var threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(todayDate.getFullYear() - 3);
+    document.getElementById('startDate').value = threeYearsAgo.toISOString().split('T')[0];
+
+    function loadAuditLogs() {
+        var logs = JSON.parse(localStorage.getItem('auditLogData') || '[]');
+        
+        var operator = document.getElementById('operatorFilter').value;
+        var businessType = document.getElementById('businessTypeFilter').value;
+        var startDate = document.getElementById('startDate').value;
+        var endDate = document.getElementById('endDate').value;
+        
+        // 筛选
+        if (operator !== '全部') {
+            logs = logs.filter(function(log) { return log.operator === operator; });
+        }
+        if (businessType !== '全部') {
+            logs = logs.filter(function(log) { return log.type === businessType; });
+        }
+        if (startDate) {
+            logs = logs.filter(function(log) { 
+                var logDate = log.time ? log.time.split(' ')[0] : '';
+                return logDate >= startDate;
+            });
+        }
+        if (endDate) {
+            logs = logs.filter(function(log) {
+                var logDate = log.time ? log.time.split(' ')[0] : '';
+                return logDate <= endDate;
+            });
+        }
+        
+        // 按时间倒序
+        logs.sort(function(a, b) {
+            return (b.time || '').localeCompare(a.time || '');
+        });
+        
+        renderAuditTable(logs);
+        document.getElementById('totalCount').innerHTML = '共 ' + logs.length + ' 条记录（含近36个月归档数据）';
+    }
+
+    function renderAuditTable(logs) {
+        var tbody = document.getElementById('auditTableBody');
+        if (!logs || logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">暂无数据</td></tr>';
+            return;
+        }
+        
+        // 显示最近100条
+        var displayLogs = logs.slice(0, 100);
+        var html = '';
+        
+        for (var i = 0; i < displayLogs.length; i++) {
+            var log = displayLogs[i];
+            var typeClass = (log.type === '库存变动' || log.type === '库存调整') ? 'type-tag' : '';
+            html += '<tr>' +
+                '<td>' + (log.time || '') + '</td>' +
+                '<td>' + (log.operator || '') + '</td>' +
+                '<td><span class="' + typeClass + '">' + (log.type || '') + '</span></td>' +
+                '<td>' + (log.content || '') + '</td>' +
+                '<td class="diff-text">' + (log.before || '-') + '</td>' +
+                '<td class="diff-text">' + (log.after || '-') + '</td>' +
+                '<td>' + (log.ip || '192.168.1.1') + '</td>' +
+                '</tr>';
+        }
+        tbody.innerHTML = html;
+    }
+
+    function resetFilters() {
+        document.getElementById('operatorFilter').value = '全部';
+        document.getElementById('businessTypeFilter').value = '全部';
+        // 重置日期范围为近3年
+        var today = new Date();
+        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        var threeYearsAgo = new Date();
+        threeYearsAgo.setFullYear(today.getFullYear() - 3);
+        document.getElementById('startDate').value = threeYearsAgo.toISOString().split('T')[0];
+        loadAuditLogs();
+    }
+
+    function exportAuditLogs() {
+        var logs = JSON.parse(localStorage.getItem('auditLogData') || '[]');
+        var operator = document.getElementById('operatorFilter').value;
+        var businessType = document.getElementById('businessTypeFilter').value;
+        var startDate = document.getElementById('startDate').value;
+        var endDate = document.getElementById('endDate').value;
+        
+        // 应用筛选
+        if (operator !== '全部') {
+            logs = logs.filter(function(log) { return log.operator === operator; });
+        }
+        if (businessType !== '全部') {
+            logs = logs.filter(function(log) { return log.type === businessType; });
+        }
+        if (startDate) {
+            logs = logs.filter(function(log) { 
+                var logDate = log.time ? log.time.split(' ')[0] : '';
+                return logDate >= startDate;
+            });
+        }
+        if (endDate) {
+            logs = logs.filter(function(log) {
+                var logDate = log.time ? log.time.split(' ')[0] : '';
+                return logDate <= endDate;
+            });
+        }
+        
+        if (typeof XLSX !== 'undefined') {
+            var exportData = [];
+            for (var i = 0; i < logs.length; i++) {
+                var log = logs[i];
+                exportData.push({
+                    '操作时间': log.time,
+                    '操作人': log.operator,
+                    '业务类型': log.type,
+                    '操作内容': log.content,
+                    '修改前数据': log.before,
+                    '修改后数据': log.after,
+                    '操作IP': log.ip
+                });
+            }
+            var ws = XLSX.utils.json_to_sheet(exportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '审计日志');
+            var dateStr = todayDate.getFullYear() + String(todayDate.getMonth()+1).padStart(2,'0') + String(todayDate.getDate()).padStart(2,'0');
+            XLSX.writeFile(wb, '审计日志_' + dateStr + '.xlsx');
+            if (typeof showToast === 'function') showToast('导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出审计日志', '-', '文件：审计日志');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    loadAuditLogs();
+</script>
+</body>
+</html>

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表导出 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .pc-screen {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* ========== 导航栏样式（与工作台一致） ========== */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .nav-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-item {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            color: #333;
+        }
+        .nav-item:hover {
+            background: #f5f5f5;
+        }
+        .nav-item.active {
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .eye-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .eye-switch {
+            width: 44px;
+            height: 22px;
+            background: #ccc;
+            border-radius: 22px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+        }
+        .eye-switch.active {
+            background: #1890ff;
+        }
+        .eye-dot {
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.3s;
+        }
+        .eye-switch.active .eye-dot {
+            left: 23px;
+        }
+        .user-info {
+            font-size: 14px;
+            color: #666;
+        }
+        /* ========== 报表网格样式（增强版） ========== */
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .report-card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e8e8e8;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .report-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1890ff, #69c0ff);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        .report-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: #d9d9d9;
+        }
+        .report-card:hover::before {
+            transform: scaleX(1);
+        }
+        /* 不同报表类型的图标颜色 */
+        .report-card.sales .report-icon { background: #1890ff; }
+        .report-card.receivable .report-icon { background: #52c41a; }
+        .report-card.refund .report-icon { background: #fa8c16; }
+        .report-card.inventory .report-icon { background: #13c2c2; }
+        .report-card.audit .report-icon { background: #722ed1; }
+        .report-card.diff .report-icon { background: #eb2f96; }
+        
+        .report-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .report-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .report-badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: #f5f5f5;
+            color: #666;
+            font-weight: normal;
+        }
+        .report-desc {
+            font-size: 13px;
+            color: #8c8c8c;
+            line-height: 1.5;
+            margin: 8px 0;
+        }
+        .report-stats {
+            display: flex;
+            gap: 16px;
+            padding: 12px 0;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+            margin: 8px 0;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #8c8c8c;
+            margin-top: 4px;
+        }
+        .export-btn {
+            height: 44px;
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(82,196,26,0.3);
+        }
+        .export-btn:active {
+            transform: translateY(0);
+        }
+        /* 滚动条样式 */
+        .report-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .report-grid::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+        .report-grid::-webkit-scrollbar-thumb {
+            background: #c0c0c0;
+            border-radius: 3px;
+        }
+        .report-grid::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
+        }
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="pc-screen">
+    <div class="top-nav">
+        <div class="nav-title">📦 卢米纳电子库存与财务一体化系统</div>
+        <div class="nav-menu">
+            <div class="nav-item" onclick="window.location.href='index.html'">工作台</div>
+            <div class="nav-item" onclick="window.location.href='receivable.html'">应收账款管理</div>
+            <div class="nav-item" onclick="window.location.href='refund-audit.html'">退款审核</div>
+            <div class="nav-item" onclick="window.location.href='audit-log.html'">审计日志</div>
+            <div class="nav-item active">报表导出</div>
+        </div>
+        <div class="nav-right">
+            <div class="eye-switch-wrap">
+                <span>🌙 护眼模式</span>
+                <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                    <div class="eye-dot"></div>
+                </div>
+            </div>
+            <div class="user-info">👤 登录人：陈总监 | <span id="currentDate"></span></div>
+        </div>
+    </div>
+
+    <div class="report-grid" id="reportGrid">
+        <!-- 合并销售报表 -->
+        <div class="report-card sales" onclick="exportSalesReport()">
+            <div class="report-icon">📊</div>
+            <div class="report-title">
+                合并销售报表
+                <span class="report-badge">全渠道</span>
+            </div>
+            <div class="report-desc">整合线上电商、线下零售、B2B业务全渠道销售数据，兼容原有Excel格式</div>
+            <div class="report-stats" id="salesStats">
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">总订单数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">总销售额</div>
+                </div>
+            </div>
+            <button class="export-btn" onclick="event.stopPropagation(); exportSalesReport()">
+                📎 导出报表
+            </button>
+        </div>
+
+        <!-- 应收账款台账 -->
+        <div class="report-card receivable" onclick="exportReceivableReport()">
+            <div class="report-icon">💰</div>
+            <div class="report-title">
+                应收账款台账
+                <span class="report-badge">B2B</span>
+            </div>
+            <div class="report-desc">包含所有B2B订单的应收金额、已收金额、账期、核销状态等信息</div>
+            <div class="report-stats" id="receivableStats">
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">未核销</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">应收总额</div>
+                </div>
+            </div>
+            <button class="export-btn" onclick="event.stopPropagation(); exportReceivableReport()">
+                📎 导出报表
+            </button>
+        </div>
+
+        <!-- 退款审核清单 -->
+        <div class="report-card refund" onclick="exportRefundReport()">
+            <div class="report-icon">🔄</div>
+            <div class="report-title">
+                退款审核清单
+                <span class="report-badge">待审核</span>
+            </div>
+            <div class="report-desc">包含所有退款申请的详细信息、审核状态、打款记录等</div>
+            <div class="report-stats" id="refundStats">
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">待审核</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">已退款</div>
+                </div>
+            </div>
+            <button class="export-btn" onclick="event.stopPropagation(); exportRefundReport()">
+                📎 导出报表
+            </button>
+        </div>
+
+        <!-- 库存盘点报表 -->
+        <div class="report-card inventory" onclick="exportInventoryReport()">
+            <div class="report-icon">📦</div>
+            <div class="report-title">
+                库存盘点报表
+                <span class="report-badge">月度</span>
+            </div>
+            <div class="report-desc">包含月度盘点的系统库存、实盘数量、差异数据、调整记录</div>
+            <div class="report-stats" id="inventoryStats">
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">SKU数量</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">总库存</div>
+                </div>
+            </div>
+            <button class="export-btn" onclick="event.stopPropagation(); exportInventoryReport()">
+                📎 导出报表
+            </button>
+        </div>
+
+        <!-- 审计日志报表 -->
+        <div class="report-card audit" onclick="exportAuditLogReport()">
+            <div class="report-icon">🔒</div>
+            <div class="report-title">
+                审计日志报表
+                <span class="report-badge">合规</span>
+            </div>
+            <div class="report-desc">包含全流程操作日志，支持按操作人、业务类型筛选导出</div>
+            <div class="report-stats" id="auditStats">
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">总日志数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">36个月</div>
+                    <div class="stat-label">保存期限</div>
+                </div>
+            </div>
+            <button class="export-btn" onclick="event.stopPropagation(); exportAuditLogReport()">
+                📎 导出报表
+            </button>
+        </div>
+
+        <!-- 库存差异分析报表 -->
+        <div class="report-card diff" onclick="exportDiffAnalysisReport()">
+            <div class="report-icon">📈</div>
+            <div class="report-title">
+                库存差异分析报表
+                <span class="report-badge">分析</span>
+            </div>
+            <div class="report-desc">统计分析库存差异率、超卖次数、同步错误类型等数据</div>
+            <div class="report-stats" id="diffStats">
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">差异率</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">--</div>
+                    <div class="stat-label">超卖次数</div>
+                </div>
+            </div>
+            <button class="export-btn" onclick="event.stopPropagation(); exportDiffAnalysisReport()">
+                📎 导出报表
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="../js/common.js"></script>
+<script src="../js/toast.js"></script>
+<script>
+    var todayDate = new Date();
+    document.getElementById('currentDate').innerText = todayDate.getFullYear() + '-' + String(todayDate.getMonth()+1).padStart(2,'0') + '-' + String(todayDate.getDate()).padStart(2,'0');
+
+    // 更新统计数据
+    function updateStats() {
+        // 订单数据统计
+        var orderData = JSON.parse(localStorage.getItem('orderData') || '[]');
+        var totalOrders = orderData.length;
+        var totalSales = orderData.reduce(function(sum, o) { return sum + (o.amount || 0); }, 0);
+        document.querySelector('#salesStats .stat-number:first-child').innerText = totalOrders;
+        document.querySelector('#salesStats .stat-number:last-child').innerText = (totalSales / 10000).toFixed(0) + '万';
+        
+        // 应收款统计
+        var receivableData = JSON.parse(localStorage.getItem('receivableData') || '[]');
+        var unWriteOff = receivableData.filter(function(r) { return r.status !== '已核销'; }).length;
+        var totalReceivable = receivableData.reduce(function(sum, r) { return sum + (r.amount - (r.received || 0)); }, 0);
+        document.querySelector('#receivableStats .stat-number:first-child').innerText = unWriteOff;
+        document.querySelector('#receivableStats .stat-number:last-child').innerText = (totalReceivable / 10000).toFixed(0) + '万';
+        
+        // 退款统计
+        var refundData = JSON.parse(localStorage.getItem('refundData') || '[]');
+        var pendingRefunds = refundData.filter(function(r) { return r.status === '待审核'; }).length;
+        var completedRefunds = refundData.filter(function(r) { return r.status === '已通过'; }).length;
+        document.querySelector('#refundStats .stat-number:first-child').innerText = pendingRefunds;
+        document.querySelector('#refundStats .stat-number:last-child').innerText = completedRefunds;
+        
+        // 库存统计
+        var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+        var skuCount = stockData.length;
+        var totalStock = stockData.reduce(function(sum, s) { return sum + (s.warehouse_qty || 0); }, 0);
+        document.querySelector('#inventoryStats .stat-number:first-child').innerText = skuCount;
+        document.querySelector('#inventoryStats .stat-number:last-child').innerText = totalStock;
+        
+        // 审计日志统计
+        var auditLogs = JSON.parse(localStorage.getItem('auditLogData') || '[]');
+        document.querySelector('#auditStats .stat-number:first-child').innerText = auditLogs.length;
+        
+        // 库存差异统计
+        var totalDiff = 0, totalQty = 0, overSales = 0;
+        stockData.forEach(function(s) {
+            totalDiff += Math.abs(s.difference || 0);
+            totalQty += (s.warehouse_qty || 0);
+            if (s.sync_error_type === 'over_sale') overSales++;
+        });
+        var diffRate = totalQty > 0 ? (totalDiff / totalQty * 100).toFixed(1) : 0;
+        document.querySelector('#diffStats .stat-number:first-child').innerHTML = diffRate + '%';
+        document.querySelector('#diffStats .stat-number:last-child').innerText = overSales;
+    }
+
+    // 导出函数（带加载状态）
+    function showExporting(btn, originalText) {
+        btn.innerHTML = '<span class="loading-spinner"></span> 导出中...';
+        btn.disabled = true;
+        setTimeout(function() {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }, 1000);
+    }
+
+    function formatDateForFilename(date) {
+        return date.getFullYear() + String(date.getMonth()+1).padStart(2,'0') + String(date.getDate()).padStart(2,'0');
+    }
+
+    function exportSalesReport() {
+        var btn = event.target.tagName === 'BUTTON' ? event.target : event.target.querySelector('.export-btn');
+        if (btn) showExporting(btn, '📎 导出报表');
+        
+        var orderData = JSON.parse(localStorage.getItem('orderData') || '[]');
+        var receivableData = JSON.parse(localStorage.getItem('receivableData') || '[]');
+        
+        var reportData = orderData.map(function(order) {
+            var receivable = receivableData.find(function(r) { return r.orderId === order.id; });
+            return {
+                '订单编号': order.id,
+                '客户名称': order.customer,
+                '订单金额': order.amount,
+                '已收金额': receivable ? (receivable.received || 0) : 0,
+                '应收余额': (order.amount - (receivable ? (receivable.received || 0) : 0)),
+                '合同账期': order.dueDate,
+                '订单状态': order.status
+            };
+        });
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(reportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '合并销售报表');
+            XLSX.writeFile(wb, '合并销售报表_' + formatDateForFilename(new Date()) + '.xlsx');
+            if (typeof showToast === 'function') showToast('✅ 合并销售报表导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出合并销售报表', '-', '文件：合并销售报表');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    function exportReceivableReport() {
+        var btn = event.target.tagName === 'BUTTON' ? event.target : event.target.querySelector('.export-btn');
+        if (btn) showExporting(btn, '📎 导出报表');
+        
+        var receivableData = JSON.parse(localStorage.getItem('receivableData') || '[]');
+        var exportData = receivableData.map(function(item) {
+            return {
+                '订单编号': item.orderId,
+                '客户名称': item.customer,
+                '应收金额': item.amount,
+                '已收金额': item.received || 0,
+                '应收余额': (item.amount - (item.received || 0)),
+                '合同账期': item.dueDate,
+                '核销状态': item.status === '已核销' ? '已核销' : (item.status === '待核销' ? '待核销' : '未核销'),
+                '状态': item.statusText
+            };
+        });
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(exportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '应收账款台账');
+            XLSX.writeFile(wb, '应收账款台账_' + formatDateForFilename(new Date()) + '.xlsx');
+            if (typeof showToast === 'function') showToast('✅ 应收账款台账导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出应收账款台账', '-', '文件：应收账款台账');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    function exportRefundReport() {
+        var btn = event.target.tagName === 'BUTTON' ? event.target : event.target.querySelector('.export-btn');
+        if (btn) showExporting(btn, '📎 导出报表');
+        
+        var refundData = JSON.parse(localStorage.getItem('refundData') || '[]');
+        var exportData = refundData.map(function(item) {
+            return {
+                '退货单号': item.id,
+                '原订单号': item.orderId,
+                '客户名称': item.customer,
+                '退款金额': item.amount,
+                '质检状态': item.quality || '',
+                '状态': item.status,
+                '录入时间': item.createTime || ''
+            };
+        });
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(exportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '退款审核清单');
+            XLSX.writeFile(wb, '退款审核清单_' + formatDateForFilename(new Date()) + '.xlsx');
+            if (typeof showToast === 'function') showToast('✅ 退款审核清单导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出退款审核清单', '-', '文件：退款审核清单');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    function exportInventoryReport() {
+        var btn = event.target.tagName === 'BUTTON' ? event.target : event.target.querySelector('.export-btn');
+        if (btn) showExporting(btn, '📎 导出报表');
+        
+        var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+        var exportData = stockData.map(function(item) {
+            return {
+                'SKU': item.sku,
+                '仓库库存': item.warehouse_qty,
+                '网站库存': item.website_qty,
+                '差异数量': item.difference,
+                '差异类型': item.sync_error_type,
+                '解决时间(分钟)': item.resolved_time_minutes
+            };
+        });
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(exportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '库存盘点报表');
+            XLSX.writeFile(wb, '库存盘点报表_' + formatDateForFilename(new Date()) + '.xlsx');
+            if (typeof showToast === 'function') showToast('✅ 库存盘点报表导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出库存盘点报表', '-', '文件：库存盘点报表');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    function exportAuditLogReport() {
+        var btn = event.target.tagName === 'BUTTON' ? event.target : event.target.querySelector('.export-btn');
+        if (btn) showExporting(btn, '📎 导出报表');
+        
+        var auditLogs = JSON.parse(localStorage.getItem('auditLogData') || '[]');
+        var exportData = auditLogs.map(function(log) {
+            return {
+                '操作时间': log.time,
+                '操作人': log.operator,
+                '业务类型': log.type,
+                '操作内容': log.content,
+                '修改前数据': log.before,
+                '修改后数据': log.after,
+                '操作IP': log.ip
+            };
+        });
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(exportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '审计日志报表');
+            XLSX.writeFile(wb, '审计日志报表_' + formatDateForFilename(new Date()) + '.xlsx');
+            if (typeof showToast === 'function') showToast('✅ 审计日志报表导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出审计日志报表', '-', '文件：审计日志报表');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    function exportDiffAnalysisReport() {
+        var btn = event.target.tagName === 'BUTTON' ? event.target : event.target.querySelector('.export-btn');
+        if (btn) showExporting(btn, '📎 导出报表');
+        
+        var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+        var totalDiff = 0, totalQty = 0, syncErrors = {};
+        stockData.forEach(function(s) {
+            totalDiff += Math.abs(s.difference || 0);
+            totalQty += (s.warehouse_qty || 0);
+            var errorType = s.sync_error_type || '未知';
+            syncErrors[errorType] = (syncErrors[errorType] || 0) + 1;
+        });
+        
+        var reportData = [
+            { '指标': '总差异数量', '数值': totalDiff },
+            { '指标': '总库存数量', '数值': totalQty },
+            { '指标': '差异率', '数值': (totalQty > 0 ? (totalDiff / totalQty * 100).toFixed(2) : 0) + '%' },
+            { '指标': '超卖次数', '数值': syncErrors['over_sale'] || 0 },
+            { '指标': '同步错误类型分布', '数值': JSON.stringify(syncErrors) }
+        ];
+        
+        if (typeof XLSX !== 'undefined') {
+            var ws = XLSX.utils.json_to_sheet(reportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '库存差异分析报表');
+            XLSX.writeFile(wb, '库存差异分析报表_' + formatDateForFilename(new Date()) + '.xlsx');
+            if (typeof showToast === 'function') showToast('✅ 库存差异分析报表导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出库存差异分析报表', '-', '文件：库存差异分析报表');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    // 初始化数据并更新统计
+    if (localStorage.getItem('systemInitialized') !== 'true' && typeof initSystemData === 'function') {
+        initSystemData();
+    }
+    
+    // 延迟更新统计数据
+    setTimeout(function() {
+        updateStats();
+    }, 200);
+</script>
+</body>
+</html>

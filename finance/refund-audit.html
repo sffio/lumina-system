@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退款审核 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .pc-screen {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* ========== 导航栏样式（与工作台一致） ========== */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .nav-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-item {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            color: #333;
+        }
+        .nav-item:hover {
+            background: #f5f5f5;
+        }
+        .nav-item.active {
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .eye-switch-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .eye-switch {
+            width: 44px;
+            height: 22px;
+            background: #ccc;
+            border-radius: 22px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+        }
+        .eye-switch.active {
+            background: #1890ff;
+        }
+        .eye-dot {
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.3s;
+        }
+        .eye-switch.active .eye-dot {
+            left: 23px;
+        }
+        .user-info {
+            font-size: 14px;
+            color: #666;
+        }
+        /* ========== 筛选栏样式（与工作台一致） ========== */
+        .filter-bar {
+            padding: 15px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .filter-input, .filter-select {
+            padding: 6px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+        }
+        .filter-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .filter-btn:first-of-type {
+            background: #1890ff;
+            color: #fff;
+        }
+        .filter-btn.secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .filter-btn.export {
+            background: #52c41a;
+            color: #fff;
+        }
+        /* ========== 主内容区 ========== */
+        .main-content {
+            display: flex;
+            gap: 20px;
+            padding: 20px 24px;
+            flex: 1;
+            overflow: hidden;
+        }
+        .refund-section {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .detail-section {
+            width: 390px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            max-height: calc(100vh - 160px);
+        }
+        .section-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+        }
+        .excel-table {
+            overflow-x: auto;
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px 12px;
+            border: 1px solid #e8e8e8;
+            text-align: left;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+        /* 状态颜色 */
+        .status-red {
+            color: #dc3545 !important;
+            font-weight: bold;
+        }
+        .status-yellow {
+            color: #ffc107 !important;
+            font-weight: bold;
+        }
+        .status-green {
+            color: #28a745 !important;
+            font-weight: bold;
+        }
+        /* 按钮样式 */
+        .audit-btn {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 4px;
+            font-size: 12px;
+        }
+        .audit-btn.pass {
+            background: #52c41a;
+            color: #fff;
+        }
+        .audit-btn.reject {
+            background: #dc3545;
+            color: #fff;
+        }
+        .action-buttons {
+            margin-top: auto;
+            display: flex;
+            gap: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e8e8e8;
+        }
+        .action-btn {
+            flex: 1;
+            height: 45px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #fff;
+        }
+        .action-btn.pass {
+            background: #52c41a;
+        }
+        .action-btn.reject {
+            background: #dc3545;
+        }
+        .detail-title {
+            font-size: 16px;
+            font-weight: bold;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e8e8e8;
+            margin-bottom: 10px;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            padding: 6px 0;
+        }
+        .detail-label {
+            color: #999;
+        }
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+            text-align: right;
+        }
+        .detail-value.danger {
+            color: #dc3545;
+        }
+        .detail-value.success {
+            color: #28a745;
+        }
+        .duty-audit-section {
+            margin: 10px 0;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 6px;
+            border: 1px solid #e8e8e8;
+        }
+        .duty-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        .required-tag {
+            color: #dc3545;
+            font-size: 12px;
+        }
+        .duty-select {
+            width: 100%;
+            height: 38px;
+            padding: 0 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            background: #fff;
+        }
+        .duty-remark {
+            width: 100%;
+            height: 60px;
+            padding: 8px 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: none;
+        }
+        .timeline {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e8e8e8;
+        }
+        .timeline-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .timeline-item {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 8px;
+            padding-left: 15px;
+            position: relative;
+        }
+        .timeline-item::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            background: #1890ff;
+            border-radius: 50%;
+            position: absolute;
+            left: 0;
+            top: 6px;
+        }
+        .timeline-item.done::before {
+            background: #28a745;
+        }
+        .timeline-item.over::before {
+            background: #dc3545;
+        }
+        /* 模态框样式 */
+        .modal-mask {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: auto;
+        }
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .modal-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .modal-btn.cancel {
+            background: #f5f5f5;
+        }
+        .modal-btn.confirm {
+            background: #1890ff;
+            color: #fff;
+        }
+        .pay-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        .pay-info-value.danger {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="pc-screen">
+    <div class="top-nav">
+        <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+        <div class="nav-menu">
+            <div class="nav-item" onclick="window.location.href='index.html'">工作台</div>
+            <div class="nav-item" onclick="window.location.href='receivable.html'">应收账款管理</div>
+            <div class="nav-item active">退款审核</div>
+            <div class="nav-item" onclick="window.location.href='audit-log.html'">审计日志</div>
+            <div class="nav-item" onclick="window.location.href='report.html'">报表导出</div>
+        </div>
+        <div class="nav-right">
+            <div class="eye-switch-wrap">
+                <span>护眼模式</span>
+                <div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()">
+                    <div class="eye-dot"></div>
+                </div>
+            </div>
+            <div class="user-info">登录人：陈总监 | <span id="currentDate"></span></div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-item">
+            <span class="filter-label">退款状态：</span>
+            <select class="filter-select" id="statusFilter">
+                <option value="全部">全部</option>
+                <option value="待审核" selected>待审核</option>
+                <option value="已通过">已通过</option>
+                <option value="已驳回">已驳回</option>
+            </select>
+        </div>
+        <button class="filter-btn" onclick="loadRefundList()">查询</button>
+        <button class="filter-btn secondary" onclick="resetFilters()">重置</button>
+        <button class="filter-btn export" onclick="exportRefundToExcel()">导出Excel</button>
+    </div>
+
+    <div class="main-content">
+        <div class="refund-section">
+            <div class="section-header">
+                <span>退款审核列表</span>
+                <span id="recordCount">加载中...</span>
+            </div>
+            <div class="excel-table">
+                <table id="refundTable">
+                    <thead>
+                        <tr>
+                            <th>退货单号</th>
+                            <th>原订单号</th>
+                            <th>SN码</th>
+                            <th>客户名称</th>
+                            <th>退款金额</th>
+                            <th>仓库收货时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="refundTableBody">
+                        <tr><td colspan="8" style="text-align:center;">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="detail-section" id="detailSection">
+            <div style="text-align:center; color:#999;">请从左侧选择一条记录</div>
+        </div>
+    </div>
+</div>
+
+<!-- 打款弹窗 -->
+<div class="modal-mask" id="payModal">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">银企直连-退款打款确认</span>
+            <button class="close-btn" onclick="closePayModal()">×</button>
+        </div>
+        <div class="modal-body" id="payModalBody"></div>
+        <div class="modal-footer">
+            <button class="modal-btn cancel" onclick="closePayModal()">取消</button>
+            <button class="modal-btn confirm" style="background:#52c41a;" onclick="confirmPayment()">确认自动打款</button>
+        </div>
+    </div>
+</div>
+
+<script src="../js/common.js"></script>
+<script src="../js/toast.js"></script>
+<script>
+    var currentRefundList = [], selectedReturnNo = null, selectedRefundData = null;
+    var todayDate = new Date();
+    document.getElementById('currentDate').innerText = todayDate.getFullYear() + '-' + String(todayDate.getMonth()+1).padStart(2,'0') + '-' + String(todayDate.getDate()).padStart(2,'0');
+
+    function loadRefundList() {
+        var status = document.getElementById('statusFilter').value;
+        var data = JSON.parse(localStorage.getItem('refundData') || '[]');
+        
+        if (status !== '全部') {
+            data = data.filter(function(r) { return r.status === status; });
+        }
+        
+        currentRefundList = data;
+        renderRefundTable(data);
+        document.getElementById('recordCount').innerText = '共 ' + data.length + ' 条记录';
+    }
+
+    function renderRefundTable(data) {
+        var tbody = document.getElementById('refundTableBody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">暂无数据</td></tr>';
+            return;
+        }
+        
+        var html = '';
+        for (var i = 0; i < data.length; i++) {
+            var item = data[i];
+            var statusClass = (item.status === '超时1天') ? 'status-red' : 'status-yellow';
+            
+            html += '<tr onclick="selectRefund(\'' + item.id + '\')" style="cursor:pointer;">' +
+                '<td>' + (item.id || '') + '</td>' +
+                '<td>' + (item.orderId || '') + '</td>' +
+                '<td>' + (item.sn || '') + '</td>' +
+                '<td>' + (item.customer || '') + '</td>' +
+                '<td>' + (item.amount || 0) + '元</td>' +
+                '<td>' + (item.createTime ? item.createTime.split(' ')[0] : '') + '</td>' +
+                '<td class="' + statusClass + '">' + (item.status || '') + '</td>' +
+                '<td>' +
+                    '<button class="audit-btn pass" onclick="event.stopPropagation(); approveRefund(\'' + item.id + '\')">通过</button>' +
+                    '<button class="audit-btn reject" onclick="event.stopPropagation(); showRejectModal(\'' + item.id + '\')">驳回</button>' +
+                '</td>' +
+                '</tr>';
+        }
+        tbody.innerHTML = html;
+    }
+
+    function selectRefund(returnNo) {
+        selectedReturnNo = returnNo;
+        selectedRefundData = null;
+        for (var i = 0; i < currentRefundList.length; i++) {
+            if (currentRefundList[i].id === returnNo) {
+                selectedRefundData = currentRefundList[i];
+                break;
+            }
+        }
+        if (!selectedRefundData) return;
+        
+        var detailHtml = 
+            '<div class="detail-title">退款详情 - ' + selectedRefundData.id + '</div>' +
+            '<div class="detail-item"><span class="detail-label">原订单号：</span><span>' + (selectedRefundData.orderId || '') + '</span></div>' +
+            '<div class="detail-item"><span class="detail-label">客户名称：</span><span>' + (selectedRefundData.customer || '') + '</span></div>' +
+            '<div class="detail-item"><span class="detail-label">退款金额：</span><span class="detail-value danger">' + (selectedRefundData.amount || 0) + '元</span></div>' +
+            '<div class="detail-item"><span class="detail-label">质检状态：</span><span class="detail-value success">' + (selectedRefundData.quality || '已确认质量问题') + '</span></div>' +
+            '<div class="detail-item"><span class="detail-label">仓库录入人：</span><span>' + (selectedRefundData.operator || '王主管') + '</span></div>' +
+            '<div class="duty-audit-section">' +
+                '<div class="duty-title">责任归属与异常原因 <span class="required-tag">*必填</span></div>' +
+                '<select class="duty-select" id="dutyDepartment">' +
+                    '<option value="">请选择责任归属部门</option>' +
+                    '<option value="仓库部">仓库部</option>' +
+                    '<option value="销售部">销售部</option>' +
+                    '<option value="财务部">财务部</option>' +
+                    '<option value="客户方">客户方</option>' +
+                '</select>' +
+                '<select class="duty-select" id="dutyReason">' +
+                    '<option value="">请选择具体异常原因</option>' +
+                    '<option value="仓库延迟凭证">仓库延迟提供质检凭证</option>' +
+                    '<option value="仓库收货延迟">仓库延迟收货录入</option>' +
+                    '<option value="财务审核延迟">财务审核流程延迟</option>' +
+                    '<option value="客户7天无理由">客户7天无理由退货</option>' +
+                    '<option value="客户质量问题">客户反馈商品质量问题</option>' +
+                '</select>' +
+                '<textarea class="duty-remark" id="remark" placeholder="补充说明（审计可查，选填）"></textarea>' +
+            '</div>' +
+            '<div class="action-buttons">' +
+                '<button class="action-btn pass" onclick="showPayModal()">审核通过</button>' +
+                '<button class="action-btn reject" onclick="showRejectModal(\'' + selectedRefundData.id + '\')">审核驳回</button>' +
+            '</div>';
+        
+        document.getElementById('detailSection').innerHTML = detailHtml;
+    }
+
+    function showPayModal() {
+        var dept = document.getElementById('dutyDepartment') ? document.getElementById('dutyDepartment').value : '';
+        var reason = document.getElementById('dutyReason') ? document.getElementById('dutyReason').value : '';
+        if (!dept || !reason) {
+            if (typeof showToast === 'function') showToast('请先选择责任归属部门和异常原因', 'error');
+            else alert('请先选择责任归属部门和异常原因');
+            return;
+        }
+        
+        var modalHtml = 
+            '<div class="pay-info-item"><span>退货单号：</span><span>' + selectedRefundData.id + '</span></div>' +
+            '<div class="pay-info-item"><span>原订单号：</span><span>' + (selectedRefundData.orderId || '') + '</span></div>' +
+            '<div class="pay-info-item"><span>收款户名：</span><span>' + (selectedRefundData.customer || '') + '</span></div>' +
+            '<div class="pay-info-item"><span>退款金额：</span><span class="pay-info-value danger">¥ ' + (selectedRefundData.amount || 0) + '.00</span></div>' +
+            '<div style="padding:12px; background:#e6f7ff; border-radius:4px; font-size:13px; margin-top:15px;">点击确认后，系统将通过银企直连自动完成退款打款</div>';
+        
+        document.getElementById('payModalBody').innerHTML = modalHtml;
+        document.getElementById('payModal').style.display = 'flex';
+    }
+
+    function closePayModal() {
+        document.getElementById('payModal').style.display = 'none';
+    }
+
+    function confirmPayment() {
+        var refundData = JSON.parse(localStorage.getItem('refundData') || '[]');
+        for (var i = 0; i < refundData.length; i++) {
+            if (refundData[i].id === selectedReturnNo) {
+                refundData[i].status = '已通过';
+                break;
+            }
+        }
+        localStorage.setItem('refundData', JSON.stringify(refundData));
+        
+        if (typeof addAuditLog === 'function') {
+            addAuditLog('退款审核', '审核通过 ' + selectedReturnNo, '状态：待审核', '状态：已通过', selectedReturnNo);
+        }
+        
+        if (typeof showToast === 'function') showToast('审核通过，打款成功！', 'success');
+        else alert('审核通过，打款成功！');
+        
+        closePayModal();
+        loadRefundList();
+        document.getElementById('detailSection').innerHTML = '<div style="text-align:center; color:#999;">请从左侧选择一条记录</div>';
+    }
+
+    function showRejectModal(returnNo) {
+        var reason = prompt('请输入驳回原因：');
+        if (reason) {
+            rejectRefund(returnNo, reason);
+        }
+    }
+
+    function rejectRefund(returnNo, reason) {
+        var refundData = JSON.parse(localStorage.getItem('refundData') || '[]');
+        for (var i = 0; i < refundData.length; i++) {
+            if (refundData[i].id === returnNo) {
+                refundData[i].status = '已驳回';
+                break;
+            }
+        }
+        localStorage.setItem('refundData', JSON.stringify(refundData));
+        
+        if (typeof addAuditLog === 'function') {
+            addAuditLog('退款审核', '审核驳回 ' + returnNo, '状态：待审核', '状态：已驳回，原因：' + reason, returnNo);
+        }
+        
+        if (typeof showToast === 'function') showToast('已驳回', 'warning');
+        else alert('已驳回');
+        
+        loadRefundList();
+        document.getElementById('detailSection').innerHTML = '<div style="text-align:center; color:#999;">请从左侧选择一条记录</div>';
+    }
+
+    function approveRefund(returnNo) {
+        selectRefund(returnNo);
+        setTimeout(function() { showPayModal(); }, 100);
+    }
+
+    function resetFilters() {
+        document.getElementById('statusFilter').value = '待审核';
+        loadRefundList();
+    }
+
+    function exportRefundToExcel() {
+        if (typeof XLSX !== 'undefined') {
+            var exportData = [];
+            for (var i = 0; i < currentRefundList.length; i++) {
+                var item = currentRefundList[i];
+                exportData.push({
+                    '退货单号': item.id,
+                    '原订单号': item.orderId,
+                    '客户名称': item.customer,
+                    '退款金额': item.amount,
+                    '状态': item.status
+                });
+            }
+            var ws = XLSX.utils.json_to_sheet(exportData);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '退款审核清单');
+            var dateStr = todayDate.getFullYear() + String(todayDate.getMonth()+1).padStart(2,'0') + String(todayDate.getDate()).padStart(2,'0');
+            XLSX.writeFile(wb, '退款审核清单_' + dateStr + '.xlsx');
+            if (typeof showToast === 'function') showToast('导出成功', 'success');
+            if (typeof addAuditLog === 'function') addAuditLog('报表导出', '导出退款审核清单', '-', '文件：退款审核清单');
+        } else {
+            alert('导出组件加载中，请稍后重试');
+        }
+    }
+
+    loadRefundList();
+    document.getElementById('payModal').addEventListener('click', function(e) {
+        if(e.target === this) closePayModal();
+    });
+</script>
+</body>
+</html>

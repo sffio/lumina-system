@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存修正 - 卢米纳电子</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <style>
+        .form-container { width: 600px; margin: 20px auto; background: var(--bg-main); border: 2px solid var(--border-color); border-radius: 8px; padding: 30px; }
+        .form-title { font-size: 22px; font-weight: bold; color: var(--text-main); margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 16px; color: var(--text-main); margin-bottom: 8px; font-weight: 500; }
+        .form-input, .form-select { width: 100%; height: 45px; padding: 0 15px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 16px; background: var(--bg-main); color: var(--text-main); }
+        .form-textarea { width: 100%; height: 80px; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 16px; background: var(--bg-main); color: var(--text-main); resize: none; }
+        .qty-row { display: flex; gap: 10px; align-items: center; }
+        .qty-row button { width: 50px; height: 45px; border: 2px solid var(--border-color); border-radius: 6px; font-size: 22px; font-weight: bold; cursor: pointer; background: var(--bg-main); }
+        .qty-row button:active { background: var(--bg-second); }
+        .qty-row input { width: 120px; text-align: center; font-size: 20px; font-weight: bold; }
+        .stock-preview { padding: 12px 16px; background: var(--bg-second); border-radius: 6px; font-size: 14px; color: var(--text-second); margin-top: 8px; line-height: 1.6; }
+        .stock-preview strong { color: var(--text-main); }
+        .submit-btn { width: 100%; height: 50px; background: var(--danger-color); color: #fff; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .submit-btn:active { opacity: 0.85; }
+        .back-btn { margin: 20px 30px; }
+    </style>
+</head>
+<body>
+    <div class="pc-screen">
+        <div class="top-nav">
+            <div class="nav-title">卢米纳电子库存与财务一体化系统</div>
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='index.html'">仓库工作台</div>
+                <div class="nav-item" onclick="window.location.href='delivery.html'">发货管理</div>
+                <div class="nav-item" onclick="window.location.href='refund.html'">退货录入</div>
+                <div class="nav-item" onclick="window.location.href='check.html'">库存盘点</div>
+                <div class="nav-item" onclick="window.location.href='stock.html'">库存总览</div>
+                <div class="nav-item" onclick="window.location.href='offline.html'">离线模式</div>
+                <div class="nav-item active">库存修正</div>
+            </div>
+            <div class="nav-right">
+                <div class="eye-switch-wrap"><span>护眼模式</span><div class="eye-switch" id="eyeSwitch" onclick="toggleEyeProtect()"><div class="eye-dot"></div></div></div>
+                <div class="user-info">登录人：王主管 | <span id="currentDate"></span></div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-btn">← 返回首页</a>
+
+        <div class="form-container">
+            <div class="form-title">🔧 库存修正</div>
+
+            <div class="form-group">
+                <label class="form-label">* 选择 SKU</label>
+                <select class="form-select" id="skuSelect" onchange="onSkuChange()">
+                    <option value="">请选择商品</option>
+                    <option value="SPK-A100">SPK-A100 — 智能音箱 Pro (仓库:8)</option>
+                    <option value="SPK-B200">SPK-B200 — 监控摄像头 4K (仓库:11)</option>
+                    <option value="SPK-C300">SPK-C300 — 智能门锁 E1 (仓库:3)</option>
+                    <option value="SPK-D400">SPK-D400 — 无线耳机 T3 (仓库:17)</option>
+                    <option value="SPK-E500">SPK-E500 — 智能手表 S2 (仓库:14)</option>
+                </select>
+                <div class="stock-preview" id="stockPreview"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">* 修正数量（正数=入库，负数=出库）</label>
+                <div class="qty-row">
+                    <button onclick="adjustQty(-1)">−</button>
+                    <input type="number" class="form-input" id="corrQty" value="0" oninput="previewResult()">
+                    <button onclick="adjustQty(1)">+</button>
+                </div>
+                <div style="font-size:13px;color:var(--text-second);margin-top:6px;" id="resultHint"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">* 修正原因</label>
+                <select class="form-select" id="corrReason">
+                    <option value="">请选择原因</option>
+                    <option value="破损">破损</option>
+                    <option value="丢失">丢失</option>
+                    <option value="调拨">调拨</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">备注（选填）</label>
+                <textarea class="form-textarea" id="corrNote" placeholder="补充说明"></textarea>
+            </div>
+
+            <button class="submit-btn" onclick="submitCorrection()">确认修正</button>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/toast.js"></script>
+    <script>
+        var today = new Date();
+        document.getElementById('currentDate').innerText = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+        var PRODUCT_LABELS = {
+            'SPK-A100': '智能音箱 Pro', 'SPK-B200': '监控摄像头 4K', 'SPK-C300': '智能门锁 E1',
+            'SPK-D400': '无线耳机 T3', 'SPK-E500': '智能手表 S2'
+        };
+
+        function getStock(sku) {
+            var data = JSON.parse(localStorage.getItem('stockData') || '[]');
+            return data.find(function(s) { return s.sku === sku; });
+        }
+
+        function onSkuChange() {
+            var sku = document.getElementById('skuSelect').value;
+            var preview = document.getElementById('stockPreview');
+            if (!sku) { preview.innerHTML = ''; return; }
+            var s = getStock(sku);
+            if (s) {
+                preview.innerHTML = '当前仓库：<strong>' + s.warehouse_qty + '</strong> | 线上：<strong>' + s.website_qty + '</strong> | 差异：<strong style="color:' + (s.difference !== 0 ? 'var(--danger-color)' : 'var(--success-color)') + ';">' + s.difference + '</strong>';
+            }
+            previewResult();
+        }
+
+        function adjustQty(delta) {
+            var input = document.getElementById('corrQty');
+            input.value = (parseInt(input.value) || 0) + delta;
+            previewResult();
+        }
+
+        function previewResult() {
+            var sku = document.getElementById('skuSelect').value;
+            var qty = parseInt(document.getElementById('corrQty').value) || 0;
+            var hint = document.getElementById('resultHint');
+            if (!sku || qty === 0) { hint.innerText = ''; return; }
+            var s = getStock(sku);
+            if (s) {
+                var after = s.warehouse_qty + qty;
+                hint.innerText = '修正后仓库库存：' + after + '（当前 ' + s.warehouse_qty + ' → ' + after + '）';
+                hint.style.color = after < 0 ? 'var(--danger-color)' : 'var(--text-second)';
+            }
+        }
+
+        function submitCorrection() {
+            var sku = document.getElementById('skuSelect').value;
+            var qty = parseInt(document.getElementById('corrQty').value) || 0;
+            var reason = document.getElementById('corrReason').value;
+            var note = document.getElementById('corrNote').value.trim();
+
+            if (!sku) { alert('请选择 SKU！'); return; }
+            if (qty === 0) { alert('修正数量不能为 0！'); return; }
+            if (!reason) { alert('请选择修正原因！'); return; }
+
+            var stockData = JSON.parse(localStorage.getItem('stockData') || '[]');
+            var name = PRODUCT_LABELS[sku] || sku;
+            var oldQty = 0, newQty = 0;
+            for (var i = 0; i < stockData.length; i++) {
+                if (stockData[i].sku === sku) {
+                    oldQty = stockData[i].warehouse_qty;
+                    stockData[i].warehouse_qty += qty;
+                    if (stockData[i].warehouse_qty < 0) stockData[i].warehouse_qty = 0;
+                    stockData[i].difference = stockData[i].website_qty - stockData[i].warehouse_qty;
+                    newQty = stockData[i].warehouse_qty;
+                    break;
+                }
+            }
+            localStorage.setItem('stockData', JSON.stringify(stockData));
+
+            var sign = qty > 0 ? '+' : '';
+            addAuditLog('库存修正', '修正 SKU：' + sku + ' ' + name + ' [' + reason + ']' + (note ? ' (' + note + ')' : ''),
+                '仓库：' + oldQty, '仓库：' + newQty + '（' + sign + qty + '）');
+
+            alert('✅ 库存修正完成！\n\n' + sku + ' ' + name + '\n' + reason + '\n仓库：' + oldQty + ' → ' + newQty + '（' + sign + qty + '）');
+
+            document.getElementById('corrQty').value = '0';
+            document.getElementById('corrReason').value = '';
+            document.getElementById('corrNote').value = '';
+            document.getElementById('resultHint').innerText = '';
+            onSkuChange();
+        }
+    </script>
+</body>
+</html>
